@@ -37,11 +37,11 @@
 #define PL_COND_FLAG_SYSTEM_MOTION     bit(1) // Single motion. Circumvents planner state. Used by home/park.
 #define PL_COND_FLAG_NO_FEED_OVERRIDE  bit(2) // Motion does not honor feed override.
 #define PL_COND_FLAG_INVERSE_TIME      bit(3) // Interprets feed rate value as inverse time when set.
-#define PL_COND_FLAG_SPINDLE_CW        bit(4)
-#define PL_COND_FLAG_SPINDLE_CCW       bit(5)
+#define PL_COND_FLAG_SPINDLE_CW        bit(4) // Rotation CW state for spindel
+#define PL_COND_FLAG_SPINDLE_CCW       bit(5) // Rotation CCW state for spindel
 #define PL_COND_FLAG_COOLANT_FLOOD     bit(6)
 #define PL_COND_FLAG_COOLANT_MIST      bit(7)
-#define PL_COND_FLAG_FEED_PER_REV      bit(8) // used for feed per revolution mode
+#define PL_COND_FLAG_FEED_PER_REV      bit(8) // used for feed per revolution mode    // * TORESEARCH
 
 #define PL_COND_MOTION_MASK    (PL_COND_FLAG_RAPID_MOTION|PL_COND_FLAG_SYSTEM_MOTION|PL_COND_FLAG_NO_FEED_OVERRIDE)
 #define PL_COND_SPINDLE_MASK   (PL_COND_FLAG_SPINDLE_CW|PL_COND_FLAG_SPINDLE_CCW)
@@ -124,7 +124,7 @@ float plan_compute_profile_nominal_speed(plan_block_t *block);
 void plan_update_velocity_profile_parameters();
 
 // Reset the planner position vector (in steps)
-void plan_sync_position();
+void plan_sync_position();    //TORESEARCH
 
 // Reinitialize plan with a partially completed block
 void plan_cycle_reinitialize();

@@ -440,13 +440,13 @@ ISR(TIMER1_COMPA_vect)
       #endif
 
       // Set real-time spindle output as segment is loaded, just prior to the first step.
-      spindle_set_speed(st.exec_segment->spindle_pwm);
+      if (st.exec_block->is_pwm_rate_adjusted) {spindle_set_speed(st.exec_segment->spindle_pwm, 0);} //!
 
     } else {
       // Segment buffer empty. Shutdown.
       st_go_idle();
       // Ensure pwm is set properly upon completion of rate-controlled motion.
-      if (st.exec_block->is_pwm_rate_adjusted) { spindle_set_speed(SPINDLE_PWM_OFF_VALUE); }
+      if (st.exec_block->is_pwm_rate_adjusted) { spindle_set_speed(SPINDLE_PWM_OFF_VALUE, 0); }
       system_set_exec_state_flag(EXEC_CYCLE_STOP); // Flag main program for cycle end
       return; // Nothing to do but exit.
     }
@@ -486,6 +486,7 @@ ISR(TIMER1_COMPA_vect)
     }
   #endif // Ramps Board
 
+    //TODO catch err when you want use Y with spindle
   #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
     st.counter_y += st.steps[Y_AXIS];
   #else
@@ -493,7 +494,7 @@ ISR(TIMER1_COMPA_vect)
   #endif
   #ifdef DEFAULTS_RAMPS_BOARD
     if (st.counter_y > st.exec_block->step_event_count) {
-      st.step_outbits[Y_AXIS] |= (1<<STEP_BIT(Y_AXIS));
+      // st.step_outbits[Y_AXIS] |= (1<<STEP_BIT(Y_AXIS));
       st.counter_y -= st.exec_block->step_event_count;
       if (st.exec_block->direction_bits[Y_AXIS] & (1<<DIRECTION_BIT(Y_AXIS))) { sys_position[Y_AXIS]--; }
       else { sys_position[Y_AXIS]++; }
@@ -506,6 +507,8 @@ ISR(TIMER1_COMPA_vect)
       else { sys_position[Y_AXIS]++; }
     }
   #endif // Ramps Board
+
+
   #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
     st.counter_z += st.steps[Z_AXIS];
   #else

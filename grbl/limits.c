@@ -332,7 +332,7 @@ void limits_go_home(uint8_t cycle_mask)
       
 
       // Perform homing cycle. Planner buffer should be empty, as required to initiate the homing cycle.
-      pl_data->feed_rate = homing_rate; // Set current homing rate.
+      pl_data->feed_rate = homing_rate; // Set current homing rate. //ANCHOR Nota bene
       plan_buffer_line(target, pl_data); // Bypass mc_line(). Directly plan homing motion.
 
       sys.step_control = STEP_CONTROL_EXECUTE_SYS_MOTION; // Set to execute homing motion and clear existing flags.

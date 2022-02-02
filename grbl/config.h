@@ -32,7 +32,7 @@
 
 #include "grbl.h" // For Arduino IDE compatibility.
 
-//Define for use on a lathe, enabled by default because this is a GRBL lathe version
+//Define for use on a lathe, enabled by default because this is a GRBL lathe version    //* TORESEARCH lim
 #define LIMIT_PIN_MASK_Y_AXIS 2					//Y-Axis pin
 #define LIMIT_PIN_MASK_ALL	7					//All pins
 #define LIMIT_PIN_MASK_ALL_EXCEPT_Y_AXIS 5		//All pins except Y-Axis pin
@@ -249,7 +249,7 @@
 // ADVANCED CONFIGURATION OPTIONS:
 
 // Enables code for debugging purposes. Not for general use and always in constant flux.
-// #define DEBUG // Uncomment to enable. Default disabled.
+#define DEBUG //REVIEW  Uncomment to enable. Default disabled.
 
 // Configure rapid, feed, and spindle override settings. These values define the max and min
 // allowable override values and the coarse and fine increments per command received. Please
@@ -373,7 +373,7 @@
 // NOTE: Only use this for debugging purposes!! When echoing, this takes up valuable resources and can effect
 // performance. If absolutely needed for normal operation, the serial write buffer should be greatly increased
 // to help minimize transmission waiting within the serial write protocol.
-// #define REPORT_ECHO_LINE_RECEIVED // Default disabled. Uncomment to enable.
+#define REPORT_ECHO_LINE_RECEIVED // Default disabled. Uncomment to enable.
 
 // Minimum planner junction speed. Sets the default minimum junction speed the planner plans to at
 // every buffer block junction, except for starting from rest and end of the buffer, which are always
@@ -648,6 +648,8 @@
 #define RPM_LINE_A4  1.203413e-01  // Used N_PIECES = 4. A and B constants of line 4.
 #define RPM_LINE_B4  1.151360e+03
 
+
+#define SPINDLE_ROTATION_ACCELERATION 1000 // For soft start/stop spindel. In RPM/s
 
 /* ---------------------------------------------------------------------------------------
    OEM Single File Configuration Option

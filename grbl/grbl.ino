@@ -24,6 +24,7 @@ Copyright (c) 2015 Sungeun K. Jeon
 Released under the MIT-license. See license.txt for details.
 ***********************************************************************/
 
-#include <grbl.h>
+#include "grbl.h"
+#pragma once
 
 // Do not alter this file!

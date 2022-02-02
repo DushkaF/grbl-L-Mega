@@ -57,6 +57,8 @@ uint8_t system_control_get_state()
   }
   return(control_state);
 }
+
+// * TORESEARCH
 //On the RAMPS Board, Index pulses are service by INT0 Pin D2
 ISR(INT0_vect){
 	if (settings.sync_pulses_per_revolution>=1)  							// If G33 is configured for index pulses

@@ -75,6 +75,11 @@
 #define EXEC_COOLANT_FLOOD_OVR_TOGGLE  bit(6)
 #define EXEC_COOLANT_MIST_OVR_TOGGLE   bit(7)
 
+#define EXEC_SPINDLE_DISABLED          bit(0)   //REVIEW spindel speed states
+#define EXEC_SPINDLE_CHANGING_SPEED    bit(1)
+#define EXEC_SPINDLE_SYNCHRONIZED_CW   PL_COND_FLAG_SPINDLE_CW
+#define EXEC_SPINDLE_SYNCHRONIZED_CCW   PL_COND_FLAG_SPINDLE_CCW
+
 // Define system state bit map. The state variable primarily tracks the individual functions
 // of Grbl to manage each without overlapping. It is also used as a messaging flag for
 // critical events.
