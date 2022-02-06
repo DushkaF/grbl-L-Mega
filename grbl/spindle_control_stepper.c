@@ -75,9 +75,6 @@ void spindle_stop()
 // and stepper ISR. Keep routine small and efficient.
 void spindle_set_speed(uint16_t pwm_value, uint8_t state)
 {
-  printInteger(pwm_value);
-  report_util_line_feed();
-
   if (state == SPINDLE_ENABLE_CW)  //Set direction
   {
     SPINDLE_DIRECTION_PORT &= ~(1 << SPINDLE_DIRECTION_BIT);
@@ -119,7 +116,6 @@ void spindle_set_speed(uint16_t pwm_value, uint8_t state)
   // Be removed for step motor on spindle
 #else
 
-// TODO This function make gradient of PRM for smooth acceleration and deceleration
 // Called by spindle_set_state() and step segment generator. Keep routine small and efficient.
 uint16_t spindle_compute_pwm_value(float rpm) // Mega2560 PWM register is 16-bit.
 {
@@ -199,14 +195,14 @@ void spindle_set_state(uint8_t state, float rpm)
   if (sys.spindle_speed != rpm || sys_rt_exec_spindel_speed_change != state)
   {
     sys_rt_exec_spindel_speed_change |= EXEC_SPINDLE_CHANGING_SPEED;
-    // spindle_speed_changing(rpm, state);
+    spindle_speed_changing(rpm, state);
     sys.spindle_speed = rpm;
   }
 
   sys.report_ovr_counter = 0; // Set to report change immediately
 }
 
-// This function realise soft changing speed
+// This function make gradient of PRM for smooth acceleration and deceleration
 void spindle_speed_changing(float end_rpm, uint8_t end_state)
 {
   float now_speed_signed = sys.spindle_speed * ((sys_rt_exec_spindel_speed_change & EXEC_SPINDLE_SYNCHRONIZED_CW) ? 1.0 : -1.0);  // RPM with sign: "+" if CW, "-" if CCW
@@ -216,10 +212,6 @@ void spindle_speed_changing(float end_rpm, uint8_t end_state)
     spindle_set_speed(spindle_compute_pwm_value(abs(now_speed_signed)), (now_speed_signed > 0 ? EXEC_SPINDLE_SYNCHRONIZED_CW : EXEC_SPINDLE_SYNCHRONIZED_CCW));
     delay_us(1000000/SPINDLE_ROTATION_ACCELERATION);
     now_speed_signed += (float) ((end_speed_signed - now_speed_signed > 0) ? 1 : -1);
-    // printInteger(now_sped_signed);
-    // printString(" ");
-    // printInteger(end_speed_signed);
-    // report_util_line_feed();
   }
   sys.spindle_speed = end_rpm;
   if (sys.spindle_speed == 0.0){
