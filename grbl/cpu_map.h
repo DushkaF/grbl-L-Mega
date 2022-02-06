@@ -214,6 +214,13 @@
   // Disable the hardware limits
   #define DISABLE_HW_LIMITS
 
+  // Define spindle enable and spindle direction output pins.
+  #define SPINDLE_ENABLE_DDR      DDRG
+  #define SPINDLE_ENABLE_PORT     PORTG
+  #define SPINDLE_ENABLE_BIT      5 // MEGA2560 Digital Pin 4 - Ramps 1.4 Servo 4 Signal pin
+  #define SPINDLE_DIRECTION_DDR   DDRE
+  #define SPINDLE_DIRECTION_PORT  PORTE
+  #define SPINDLE_DIRECTION_BIT   3 // MEGA2560 Digital Pin 5 - Ramps 1.4 Servo 3 Signal pin
 
   // Define flood and mist coolant enable output pins.
   #define COOLANT_FLOOD_DDR   DDRB
@@ -245,25 +252,16 @@
   #define PROBE_BIT       7  // MEGA2560 Analog Pin 15
   #define PROBE_MASK      (1<<PROBE_BIT)
 
-
-  // Define spindle enable and spindle direction output pins.
-  #define SPINDLE_ENABLE_DDR      DDRG
-  #define SPINDLE_ENABLE_PORT     PORTG
-  #define SPINDLE_ENABLE_BIT      5 // MEGA2560 Digital Pin 4 - Ramps 1.4 Servo 4 Signal pin
-  #define SPINDLE_DIRECTION_DDR   DDRE
-  #define SPINDLE_DIRECTION_PORT  PORTE
-  #define SPINDLE_DIRECTION_BIT   3 // MEGA2560 Digital Pin 5 - Ramps 1.4 Servo 3 Signal pin
-
   // Advanced Configuration Below You should not need to touch these variables
   // Set Timer up to use TIMER4B which is attached to Digital Pin 8 - Ramps 1.4 12v output with heat sink
   #define SPINDLE_PWM_MAX_VALUE     1024.0 // Translates to about 1.9 kHz PWM frequency at 1/8 prescaler
   #ifndef SPINDLE_PWM_MIN_VALUE
-  #define SPINDLE_PWM_MIN_VALUE    1   // Must be greater than zero.
+  #define SPINDLE_PWM_MIN_VALUE   1   // Must be greater than zero.
   #endif
   #define SPINDLE_PWM_OFF_VALUE     0
   #define SPINDLE_PWM_RANGE         (SPINDLE_PWM_MAX_VALUE-SPINDLE_PWM_MIN_VALUE)
 
-  //Control Digital Pin 6 which is Servo 2 signal pin on Ramps 1.4 board, it's 8 pin
+  //Control Digital Pin 6 which is Servo 2 signal pin on Ramps 1.4 board
   #define SPINDLE_TCCRA_REGISTER    TCCR4A
   #define SPINDLE_TCCRB_REGISTER    TCCR4B
   #define SPINDLE_OCR_REGISTER      OCR4C

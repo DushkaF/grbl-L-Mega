@@ -406,7 +406,7 @@ uint8_t plan_buffer_line(float *target, plan_line_data_t *pl_data)
   block->acceleration = limit_value_by_axis_maximum(settings.acceleration, unit_vec);
   block->rapid_rate = limit_value_by_axis_maximum(settings.max_rate, unit_vec);
 
-  // In feed per revolution mode set the feed distance.   // * TORESEARCH
+  // In feed per revolution mode set the feed distance.
   if ((block->condition & PL_COND_FLAG_FEED_PER_REV)) {
     threading_millimeters_target=block->millimeters;             // The feed required
   }

@@ -622,7 +622,7 @@ void report_realtime_status()
     }
   #endif
 
-  // report the synchronization state (G33) // * TORESEARCH
+  // report the synchronization state (G33)
   printPgmString(PSTR("|Se:"));
   if (bit_istrue(threading_exec_flags,(EXEC_SYNCHRONIZATION_STATE_REPORT))) {				// report if a report is flagged
 	  printFloat_CoordValue(threading_synchronization_millimeters_error);							// print the synchronization error in the unit set
