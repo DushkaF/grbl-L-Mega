@@ -246,42 +246,74 @@
   #define PROBE_MASK      (1<<PROBE_BIT)
 
 
-  // Advanced Configuration Below You should not need to touch these variables
-  // Set Timer up to use TIMER4B which is attached to Digital Pin 8 - Ramps 1.4 12v output with heat sink
-  #define SPINDLE_PWM_MAX_VALUE     1024.0 // Translates to about 1.9 kHz PWM frequency at 1/8 prescaler
-  #ifndef SPINDLE_PWM_MIN_VALUE
-  #define SPINDLE_PWM_MIN_VALUE    1   // Must be greater than zero.
+  #define SPINDLE_COMBINE_AXIS Y_AXIS   // Set the axis combined with the spindle
+
+
+    // Advanced Configuration Below You should not need to touch these variables
+
+  #ifndef SPINDLE_COMBINE_AXIS
+    // Set Timer up to use TIMER4B which is attached to Digital Pin 8 - Ramps 1.4 12v output with heat sink
+    #define SPINDLE_PWM_MAX_VALUE     1024.0 // Translates to about 1.9 kHz PWM frequency at 1/8 prescaler
+    #ifndef SPINDLE_PWM_MIN_VALUE
+    #define SPINDLE_PWM_MIN_VALUE    1   // Must be greater than zero.
+    #endif
+    #define SPINDLE_PWM_OFF_VALUE     0
+    #define SPINDLE_PWM_RANGE         (SPINDLE_PWM_MAX_VALUE-SPINDLE_PWM_MIN_VALUE)
+
+  //Control Digital Pin 6 which is Servo 2 signal pin on Ramps 1.4 board, it's 8 pin
+    #define SPINDLE_TCCRA_REGISTER    TCCR4A
+    #define SPINDLE_TCCRB_REGISTER    TCCR4B
+    #define SPINDLE_OCR_REGISTER      OCR4C
+    #define SPINDLE_COMB_BIT          COM4C1
+
+    // 1/8 Prescaler, 16-bit Fast PWM mode
+    #define SPINDLE_TCCRA_INIT_MASK ((1<<WGM40) | (1<<WGM41))
+    #define SPINDLE_TCCRB_INIT_MASK ((1<<WGM42) | (1<<WGM43) | (1<<CS41)) 
+    #define SPINDLE_OCRA_REGISTER   OCR4A // 16-bit Fast PWM mode requires top reset value stored here.
+    #define SPINDLE_OCRA_TOP_VALUE  0x0400 // PWM counter reset value. Should be the same as PWM_MAX_VALUE in hex.
+
+    // Define spindle output pins.
+    #define SPINDLE_CONTROL_DDR   DDRH
+    #define SPINDLE_CONTROL_PORT  PORTH
+    #define SPINDLE_CONTROL_BIT   5 // MEGA2560 Digital Pin 8 
+
+    // Define spindle enable and spindle direction output pins.
+    #define SPINDLE_ENABLE_DDR      DDRG
+    #define SPINDLE_ENABLE_PORT     PORTG
+    #define SPINDLE_ENABLE_BIT      5 // MEGA2560 Digital Pin 4 - Ramps 1.4 Servo 4 Signal pin
+
+    #define SPINDLE_DIRECTION_DDR   DDRE
+    #define SPINDLE_DIRECTION_PORT  PORTE
+    #define SPINDLE_DIRECTION_BIT   3 // MEGA2560 Digital Pin 5 - Ramps 1.4 Servo 3 Signal pin
+  #else
+    
+    #define SPINDLE_RPM_OFF_VALUE         0
+
+    #define SPINDLE_TIMER          TIMER4_COMPA_vect
+    #define SPINDLE_TCCRA_REGISTER TCCR4A
+    #define SPINDLE_TCCRB_REGISTER TCCR4B
+    #define SPINDLE_TIMSK_REGISTER TIMSK4
+    #define SPINDLE_ICR_REGISTER   ICR4
+    #define SPINDLE_OCIE_BIT       OCIE4A
+
+    #define SPINDLE_TCCRA_INIT_MASK 0
+    #define SPINDLE_TCCRB_INIT_MASK ((1 << WGM42) | (1 << WGM43))
+    
+    // Define spindle output pins.
+    #define SPINDLE_CONTROL_DDR STEP_DDR(1)
+    #define SPINDLE_CONTROL_PORT STEP_PORT(1)
+    #define SPINDLE_CONTROL_BIT STEP_BIT(1)
+
+    // Define spindle enable and spindle direction output pins.
+    #define SPINDLE_ENABLE_DDR STEPPER_DISABLE_DDR(1)
+    #define SPINDLE_ENABLE_PORT STEPPER_DISABLE_PORT(1)
+    #define SPINDLE_ENABLE_BIT STEPPER_DISABLE_BIT(1)
+    #define INVERT_SPINDLE_ENABLE_PIN
+
+    #define SPINDLE_DIRECTION_DDR DIRECTION_DDR(1)
+    #define SPINDLE_DIRECTION_PORT DIRECTION_PORT(1)
+    #define SPINDLE_DIRECTION_BIT DIRECTION_BIT(1)
   #endif
-  #define SPINDLE_PWM_OFF_VALUE     0
-  #define SPINDLE_PWM_RANGE         (SPINDLE_PWM_MAX_VALUE-SPINDLE_PWM_MIN_VALUE)
-
-
-  //! It is for 8 pin 
-//Control Digital Pin 6 which is Servo 2 signal pin on Ramps 1.4 board, it's 8 pin
-  #define SPINDLE_TCCRA_REGISTER    TCCR4A
-  #define SPINDLE_TCCRB_REGISTER    TCCR4B
-  #define SPINDLE_OCR_REGISTER      OCR4C
-  #define SPINDLE_COMB_BIT          COM4C1
-
-  // 1/8 Prescaler, 16-bit Fast PWM mode
-  #define SPINDLE_TCCRA_INIT_MASK ((1<<WGM40) | (1<<WGM41))
-  #define SPINDLE_TCCRB_INIT_MASK ((1<<WGM42) | (1<<WGM43) | (1<<CS41)) 
-  #define SPINDLE_OCRA_REGISTER   OCR4A // 16-bit Fast PWM mode requires top reset value stored here.
-  #define SPINDLE_OCRA_TOP_VALUE  0x0400 // PWM counter reset value. Should be the same as PWM_MAX_VALUE in hex.
-
-  // Define spindle output pins.
-  #define SPINDLE_PWM_DDR   DDRH
-  #define SPINDLE_PWM_PORT  PORTH
-  #define SPINDLE_PWM_BIT   5 // MEGA2560 Digital Pin 8 
-
-
-  // Define spindle enable and spindle direction output pins.
-  #define SPINDLE_ENABLE_DDR      DDRG
-  #define SPINDLE_ENABLE_PORT     PORTG
-  #define SPINDLE_ENABLE_BIT      5 // MEGA2560 Digital Pin 4 - Ramps 1.4 Servo 4 Signal pin
-  #define SPINDLE_DIRECTION_DDR   DDRE
-  #define SPINDLE_DIRECTION_PORT  PORTE
-  #define SPINDLE_DIRECTION_BIT   3 // MEGA2560 Digital Pin 5 - Ramps 1.4 Servo 3 Signal pin
   
   #define SPINDLE_INDEX_DDR		DDRD
   #define SPINDLE_INDEX_PIN 	PIND

@@ -224,7 +224,7 @@
 
 // Inverts the spindle enable pin from low-disabled/high-enabled to low-enabled/high-disabled. Useful
 // for some pre-built electronic boards.
-// #define INVERT_SPINDLE_ENABLE_PIN // Default disabled. Uncomment to enable.
+#define INVERT_SPINDLE_ENABLE_PIN // Default disabled. Uncomment to enable.
 
 // Inverts the selected coolant pin from low-disabled/high-enabled to low-enabled/high-disabled. Useful
 // for some pre-built electronic boards.
@@ -421,7 +421,7 @@
 // NOTE: Uncomment to enable. The recommended delay must be > 3us, and, when added with the
 // user-supplied step pulse time, the total time must not exceed 127us. Reported successful
 // values for certain setups have ranged from 5 to 20us.
-// #define STEP_PULSE_DELAY 10 // Step pulse delay in microseconds. Default disabled.
+// #define STEP_PULSE_DELAY 10 // Step pulse delay in microseconds. Default disabled. //! Not support for combine spindel
 
 // Creates a delay between the first step pulse after enabling and after the last step pulse before disabling.
 // Lichuan servo's running in step-dir mode need a 100 ms delay between the motor enable signal and the first step pulse
@@ -649,7 +649,10 @@
 #define RPM_LINE_B4  1.151360e+03
 
 
-#define SPINDLE_ROTATION_ACCELERATION 1000 // For soft start/stop spindel. In RPM/s
+#define SPINDLE_STEPS_PER_REVOLUTION  200           // for stepper with 1.8 grad step
+#define SPINDLE_MICROSTEP_DIVIDER     32
+
+#define SPINDLE_ROTATION_ACCELERATION 10000 // For soft start/stop spindel. In RPM/s
 
 /* ---------------------------------------------------------------------------------------
    OEM Single File Configuration Option

@@ -29,7 +29,7 @@
 #define SPINDLE_STATE_CW       bit(0)
 #define SPINDLE_STATE_CCW      bit(1)
 
-extern volatile uint8_t sys_rt_exec_spindel_speed_change;
+extern volatile uint8_t sys_rt_exec_spindel_state;
 
 // Initializes spindle pins and hardware PWM, if enabled.
 void spindle_init();
@@ -49,7 +49,7 @@ void spindle_set_state(uint8_t state, float rpm);
 
 // Sets spindle PWM quickly for stepper ISR. Also called by spindle_set_state().
 // NOTE: Mega2560 PWM register is 16-bit.
-void spindle_set_speed(uint16_t pwm_value, uint8_t state);
+void spindle_set_speed(uint32_t freq_value, uint8_t state);
 
 // Computes Mega2560-specific PWM register value for the given RPM for quick updating.
 uint16_t spindle_compute_pwm_value(float rpm);

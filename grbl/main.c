@@ -30,7 +30,7 @@ volatile uint8_t sys_rt_exec_state;                // Global real time executor 
 volatile uint8_t sys_rt_exec_alarm;                // Global real time executor bit flag variable for setting various alarms.
 volatile uint8_t sys_rt_exec_motion_override;     // Global real time executor bit flag variable for motion-based overrides.
 volatile uint8_t sys_rt_exec_accessory_override;   // Global real time executor bit flag variable for spindle/coolant overrides.
-volatile uint8_t sys_rt_exec_spindel_speed_change; // REVIEW : Global real time executor bit flag variable for spindle speed change.
+volatile uint8_t sys_rt_exec_spindel_state; // REVIEW : Global real time executor bit flag variable for spindle speed change.
 
 #ifdef DEBUG
 volatile uint8_t sys_rt_exec_debug;
@@ -87,7 +87,7 @@ int main(void)
     sys_rt_exec_alarm = 0;
     sys_rt_exec_motion_override = 0;
     sys_rt_exec_accessory_override = 0;
-    sys_rt_exec_spindel_speed_change = 0;
+    sys_rt_exec_spindel_state = EXEC_SPINDLE_DISABLED;
 
     // Reset Grbl primary systems.
     serial_reset_read_buffer(); // Clear serial read buffer

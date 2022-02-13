@@ -16,9 +16,9 @@
 #define STEP_PIN(i) _PIN(STEP_PORT_##i)
 
 // Define spindle output pins.
-#define SPINDLE_PWM_DDR STEP_DDR(1)
-#define SPINDLE_PWM_PORT STEP_PORT(1)
-#define SPINDLE_PWM_BIT STEP_BIT(1)
+#define SPINDLE_CONTROL_DDR STEP_DDR(1)
+#define SPINDLE_CONTROL_PORT STEP_PORT(1)
+#define SPINDLE_CONTROL_BIT STEP_BIT(1)
 
 #define SPINDLE_TIMER          TIMER4_COMPA_vect
 #define SPINDLE_TCCRA_REGISTER TCCR4A
@@ -90,11 +90,11 @@ void spindle_init()
   // Configure variable spindle PWM and enable pin, if required.
   SPINDLE_TCCRA_REGISTER = SPINDLE_TCCRA_INIT_MASK; // Configure PWM output compare timer
   SPINDLE_TCCRB_REGISTER = SPINDLE_TCCRB_INIT_MASK;
-  SPINDLE_PWM_DDR |= (1 << SPINDLE_PWM_BIT);        // Configure as PWM output pin.
+  SPINDLE_CONTROL_DDR |= (1 << SPINDLE_CONTROL_BIT);        // Configure as PWM output pin.
 }
 
 ISR(SPINDLE_TIMER) {
-  SPINDLE_PWM_PORT = (~SPINDLE_PWM_PORT & (1 << SPINDLE_PWM_BIT));
+  SPINDLE_CONTROL_PORT = (~SPINDLE_CONTROL_PORT & (1 << SPINDLE_CONTROL_BIT));
 }
 
 void setup() {

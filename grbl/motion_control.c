@@ -370,7 +370,8 @@ void mc_reset()
     system_set_exec_state_flag(EXEC_RESET);
 
     // Kill spindle and coolant.
-    spindle_stop();
+    // spindle_stop(); // Spindle will be killing you
+    spindle_set_state(SPINDLE_DISABLE, 0.0);
     coolant_stop();
 
     // Kill steppers only if in any motion state, i.e. cycle, actively holding, or homing.

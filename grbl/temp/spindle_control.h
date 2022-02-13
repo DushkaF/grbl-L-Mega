@@ -29,7 +29,7 @@
 #define SPINDLE_STATE_CW       bit(0)
 #define SPINDLE_STATE_CCW      bit(1)
 
-extern volatile uint8_t sys_rt_exec_spindel_speed_change;
+extern volatile uint8_t sys_rt_exec_spindel_state;
 
 // Initializes spindle pins and hardware PWM, if enabled.
 void spindle_init();

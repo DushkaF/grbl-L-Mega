@@ -157,9 +157,9 @@ uint8_t gc_execute_line(char *line)
               mantissa = 0; // Set to zero to indicate valid non-integer G command.
             }                
             break;
-		  case 33: //Check if Synchronization pulses per revolution is set and hardware limits are enabled
-		    if (settings.sync_pulses_per_revolution==0) FAIL(STATUS_GCODE_G33_SYNCHRONIZATION_PULSES_PER_REVOLUTION_NOT_SET);
-			if (bit_isfalse(settings.flags,BITFLAG_HARD_LIMIT_ENABLE)) FAIL(STATUS_GCODE_G33_HARDWARE_LIMITS_NOT_ENABLED);
+          case 33: //Check if Synchronization pulses per revolution is set and hardware limits are enabled
+            if (settings.sync_pulses_per_revolution==0) FAIL(STATUS_GCODE_G33_SYNCHRONIZATION_PULSES_PER_REVOLUTION_NOT_SET);
+          if (bit_isfalse(settings.flags,BITFLAG_HARD_LIMIT_ENABLE)) FAIL(STATUS_GCODE_G33_HARDWARE_LIMITS_NOT_ENABLED);
             // No break. Continues to next line.
           case 0: case 1: case 2: case 3: case 38:
             // Check for G0/1/2/3/38 being called with G10/28/30/92 on same block.
@@ -333,7 +333,7 @@ uint8_t gc_execute_line(char *line)
 
 
   /* -------------------------------------------------------------------------------------
-     STEP 3: Error-check all commands and values passed in this block. This step ensures all of
+    ! STEP 3: Error-check all commands and values passed in this block. This step ensures all of
      the commands are valid for execution and follows the NIST standard as closely as possible.
      If an error is found, all commands and values in this block are dumped and will not update
      the active system g-code modes. If the block is ok, the active system g-code modes will be
@@ -364,6 +364,11 @@ uint8_t gc_execute_line(char *line)
   // command has been sent. If so, set axis command to current motion mode.
   if (axis_words) {
     if (!axis_command) { axis_command = AXIS_COMMAND_MOTION_MODE; } // Assign implicit motion-mode
+    // Check spindle mode, if use stepper like a spindle. For your safe!
+    if ((axis_command == AXIS_COMMAND_MOTION_MODE || axis_command == NON_MODAL_GO_HOME_0) && axis_words & (1 << SPINDLE_COMBINE_AXIS) && sys_rt_exec_spindel_state != EXEC_SPINDLE_DISABLED) 
+    {
+      FAIL(STATUS_SPINDLE_MODE_AND_AXIS_MOTION_CONFLICT);
+     } // For safe your soul)
   }
 
   // Check for valid line number N value.
@@ -617,6 +622,10 @@ uint8_t gc_execute_line(char *line)
               if (!(axis_words & (1<<idx))) { gc_block.values.ijk[idx] = gc_state.position[idx]; }
             }
           } else {
+            // Check spindle mode, if use stepper like a spindle. For your safe!
+            if (!(axis_words & (1<<SPINDLE_COMBINE_AXIS)) && sys_rt_exec_spindel_state != EXEC_SPINDLE_DISABLED) 
+            { gc_block.values.ijk[SPINDLE_COMBINE_AXIS] = gc_state.position[SPINDLE_COMBINE_AXIS]; } // For safe your soul
+
             axis_command = AXIS_COMMAND_NONE; // Set to none if no intermediate motion.
           }
           break;
@@ -838,7 +847,7 @@ uint8_t gc_execute_line(char *line)
   if (value_words) { FAIL(STATUS_GCODE_UNUSED_WORDS); } // [Unused words]
 
   /* -------------------------------------------------------------------------------------
-     STEP 4: EXECUTE!!
+     ! STEP 4: EXECUTE!!
      Assumes that all error-checking has been completed and no failure modes exist. We just
      need to update the state and execute the block according to the order-of-execution.
   */
@@ -1136,7 +1145,7 @@ uint8_t gc_execute_line(char *line)
       if (sys.state != STATE_CHECK_MODE) {
         if (!(settings_read_coord_data(gc_state.modal.coord_select,gc_state.coord_system))) { FAIL(STATUS_SETTING_READ_FAIL); }
         system_flag_wco_change(); // Set to refresh immediately just in case something altered.
-        spindle_set_state(SPINDLE_DISABLE,0.0);
+        spindle_set_state(SPINDLE_DISABLE, 0.0);
         coolant_set_state(COOLANT_DISABLE);
       }
       report_feedback_message(MESSAGE_PROGRAM_END);

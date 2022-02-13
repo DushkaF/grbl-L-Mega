@@ -61,16 +61,14 @@
 #define SPINDLE_TIMSK_REGISTER TIMSK4
 #define SPINDLE_ICR_REGISTER   ICR4
 #define SPINDLE_OCIE_BIT       OCIE4A
-// #define SPINDLE_COMB_BIT COM4C1
 
 #define SPINDLE_TCCRA_INIT_MASK 0
 #define SPINDLE_TCCRB_INIT_MASK ((1 << WGM42) | (1 << WGM43))
-#define SPINDLE_OCRA_TOP_VALUE 0x0400 // PWM counter reset value. Should be the same as PWM_MAX_VALUE in hex.
 
 // Define spindle output pins.
-#define SPINDLE_PWM_DDR STEP_DDR(1)
-#define SPINDLE_PWM_PORT STEP_PORT(1)
-#define SPINDLE_PWM_BIT STEP_BIT(1)
+#define SPINDLE_CONTROL_DDR STEP_DDR(1)
+#define SPINDLE_CONTROL_PORT STEP_PORT(1)
+#define SPINDLE_CONTROL_BIT STEP_BIT(1)
 
 // Define spindle enable and spindle direction output pins.
 #define SPINDLE_ENABLE_DDR STEPPER_DISABLE_DDR(1)
@@ -84,9 +82,9 @@
 
 #define SPINDLE_STEPS_PER_REVOLUTION  200           // for stepper with 1.8 grad step
 #define SPINDLE_MICROSTEP_DIVIDER     32
-#define SPINDLE_RPM_OFF_VALUE             0
+#define SPINDLE_RPM_OFF_VALUE         0
 
-#define SPINDLE_ROTATION_ACCELERATION 10000 // For soft start/stop spindel. In RPM/s
+#define SPINDLE_ROTATION_ACCELERATION 50000 // For soft start/stop spindel. In RPM/s
 
 
 // Modal Group M7: Spindle control
@@ -240,26 +238,26 @@ void delay_us(uint32_t us)
 }
 
 ISR(SPINDLE_TIMER) {
-  SPINDLE_PWM_PORT ^= (1 << SPINDLE_PWM_BIT);
+  SPINDLE_CONTROL_PORT ^= (1 << SPINDLE_CONTROL_BIT);
 }
 
 void spindle_init()
 {
   // Configure variable spindle PWM and enable pin, if required.
-  SPINDLE_PWM_DDR |= (1 << SPINDLE_PWM_BIT);        // Configure as PWM output pin.
+  SPINDLE_CONTROL_DDR |= (1 << SPINDLE_CONTROL_BIT);        // Configure as PWM output pin.
   SPINDLE_TCCRA_REGISTER = SPINDLE_TCCRA_INIT_MASK; // Configure PWM output compare timer
   SPINDLE_TCCRB_REGISTER = SPINDLE_TCCRB_INIT_MASK;
   SPINDLE_ENABLE_DDR |= (1 << SPINDLE_ENABLE_BIT);       // Configure as output pin.
   SPINDLE_DIRECTION_DDR |= (1 << SPINDLE_DIRECTION_BIT); // Configure as output pin.
 
-  freq_gradient = (((1.0 / (60.0)) * (360.0 / (float)(SPINDLE_MICROSTEP_DIVIDER))) / (360.0 / (float) SPINDLE_STEPS_PER_REVOLUTION));
+  freq_gradient = (1.0/ 60.0) * (360.0 * SPINDLE_MICROSTEP_DIVIDER / 1.8);
   spindle_stop();
 }
 
 void spindle_stop()
 {
   SPINDLE_TIMSK_REGISTER &= ~(1 << SPINDLE_OCIE_BIT); // turn off SPINDLE_TIMER
-  SPINDLE_PWM_PORT = ~(1 << SPINDLE_PWM_BIT);        // set step pin low
+  SPINDLE_CONTROL_PORT &= ~(1 << SPINDLE_CONTROL_BIT);        // set step pin low
   sei();
 #ifdef INVERT_SPINDLE_ENABLE_PIN
   SPINDLE_ENABLE_PORT |= (1 << SPINDLE_ENABLE_BIT); // Set pin to high
@@ -272,9 +270,6 @@ void spindle_stop()
 // and stepper ISR. Keep routine small and efficient.
 void spindle_set_speed(uint32_t freq_value, uint8_t state)
 {
-  // printInteger(pwm_value);
-  // report_util_line_feed();
-
   if (state == SPINDLE_ENABLE_CW) //Set direction
   {
     SPINDLE_DIRECTION_PORT &= ~(1 << SPINDLE_DIRECTION_BIT);
@@ -304,11 +299,10 @@ void spindle_set_speed(uint32_t freq_value, uint8_t state)
   if (freq_value == SPINDLE_RPM_OFF_VALUE)
   {
     SPINDLE_TIMSK_REGISTER &= ~(1 << SPINDLE_OCIE_BIT); // turn off SPINDLE_TIMER
-    SPINDLE_PWM_PORT = ~(1 << SPINDLE_PWM_BIT);        // set step pin low
+    SPINDLE_CONTROL_PORT &= ~(1 << SPINDLE_CONTROL_BIT);        // set step pin low
   }
   else
   {
-
     SPINDLE_TIMSK_REGISTER |= (1 << SPINDLE_OCIE_BIT); // Ensure PWM output is enabled.
 #ifdef INVERT_SPINDLE_ENABLE_PIN
     SPINDLE_ENABLE_PORT &= ~(1 << SPINDLE_ENABLE_BIT);
@@ -329,9 +323,7 @@ uint32_t spindle_compute_freq_value(float rpm) // Mega2560 PWM register is 16-bi
   // NOTE: A nonlinear model could be installed here, if required, but keep it VERY light-weight.
   Serial.print("RPM ");
   Serial.println(rpm);
-  freq_value = (uint32_t)((rpm / 60.0) * (360.0 * SPINDLE_MICROSTEP_DIVIDER / 1.8));
-  //  Serial.print("FREQ ");
-  //  Serial.println(freq_value);
+  freq_value = (uint32_t)(rpm * freq_gradient);
   return (freq_value);
 }
 
@@ -360,7 +352,11 @@ void spindle_set_state(uint8_t state, float rpm)
         rpm = 0.0;
       } // TODO: May need to be rpm_min*(100/MAX_SPINDLE_SPEED_OVERRIDE);
     }
+  }
 
+  if (sys.spindle_speed != rpm || sys_rt_exec_spindel_speed_change != state)
+  {
+    
 #ifndef SPINDLE_ENABLE_OFF_WITH_ZERO_SPEED
 #ifdef INVERT_SPINDLE_ENABLE_PIN
     SPINDLE_ENABLE_PORT &= ~(1 << SPINDLE_ENABLE_BIT);
@@ -368,10 +364,6 @@ void spindle_set_state(uint8_t state, float rpm)
     SPINDLE_ENABLE_PORT |= (1 << SPINDLE_ENABLE_BIT);
 #endif
 #endif
-  }
-
-  if (sys.spindle_speed != rpm || sys_rt_exec_spindel_speed_change != state)
-  {
     // correcting RPM for output
     rpm *= (0.010 * sys.spindle_speed_ovr); // Scale by spindle speed override value.
     // Calculate PWM register value based on rpm max/min settings and programmed rpm.
@@ -399,26 +391,15 @@ void spindle_speed_changing(float end_rpm, uint8_t end_state)
   float end_speed_signed = end_rpm * ((end_state & EXEC_SPINDLE_SYNCHRONIZED_CW) ? 1.0 : -1.0);
   float increment = (float)(SPINDLE_ROTATION_ACCELERATION * 0.00001);
   increment *= (end_speed_signed - now_speed_signed) >= 0 ? 1.0 : -1.0;
-  Serial.print(increment);
-  Serial.print(" ");
-  Serial.print((now_speed_signed > 0 ? 1 : -1));
-  Serial.print(" ");
-  Serial.print((end_speed_signed > 0 ? 1 : -1));
-  Serial.print(" ");
-  Serial.print(abs(end_speed_signed) >= abs(now_speed_signed));
-  Serial.println(" ");
-  do 
+  while ((((end_speed_signed - now_speed_signed) >= 0 ? 1.0 : -1.0) == ((end_speed_signed - (now_speed_signed + increment)) >= 0 ? 1.0 : -1.0)))
   {
     now_speed_signed += increment;
     spindle_set_speed(spindle_compute_freq_value(abs(now_speed_signed)), (now_speed_signed > 0 ? EXEC_SPINDLE_SYNCHRONIZED_CW : EXEC_SPINDLE_SYNCHRONIZED_CCW));
-    //    Serial.print(now_speed_signed);
-    //    Serial.print(" ");
-    //    Serial.println(spindle_compute_freq_value(abs(now_speed_signed)));
     delayMicroseconds(10);
-  } while ((((end_speed_signed - now_speed_signed) >= 0 ? 1.0 : -1.0) == ((end_speed_signed - (now_speed_signed + increment)) >= 0 ? 1.0 : -1.0)));
-  spindle_set_speed(spindle_compute_freq_value(abs(end_speed_signed)), (now_speed_signed > 0 ? EXEC_SPINDLE_SYNCHRONIZED_CW : EXEC_SPINDLE_SYNCHRONIZED_CCW));  // set end RPM value
+  }
   sys.spindle_speed = end_rpm;
-  if (sys.spindle_speed == 0.0)
+  spindle_set_speed(spindle_compute_freq_value(abs(end_speed_signed)), (end_speed_signed > 0 ? EXEC_SPINDLE_SYNCHRONIZED_CW : EXEC_SPINDLE_SYNCHRONIZED_CCW));
+  if (end_state == SPINDLE_DISABLE)
   {
     spindle_stop();
   }
@@ -445,7 +426,16 @@ void loop()
   Serial.println("NEXT");
   delay(1000);
 
+  spindle_set_state(SPINDLE_ENABLE_CW, 50);
+//  spindle_set_state(SPINDLE_ENABLE_CW, 2000);
+  Serial.println("NEXT");
+  delay(1000);
+
   spindle_set_state(SPINDLE_DISABLE, 0);
+  Serial.println("NEXT");
+  delay(1000);
+
+    spindle_set_state(SPINDLE_ENABLE_CW, 0);
 //  spindle_set_state(SPINDLE_ENABLE_CW, 2000);
   Serial.println("NEXT");
   delay(1000);
