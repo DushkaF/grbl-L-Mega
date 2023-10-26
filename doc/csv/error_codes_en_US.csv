@@ -39,3 +39,4 @@
 "38","Invalid gcode ID:38","Tool number greater than max supported value."
 "39","Invalid gcode ID:39","G33 Synchronization pulses per rotation not set ($40=0)"
 "40","Invalid gcode ID:40","G33 Hardware limits not enabled ($21=0)"
+"41","Invalid gcode ID:41","An attempt was made to move the spindle axis while spindle M3/M4 was rotating."

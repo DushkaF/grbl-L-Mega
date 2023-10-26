@@ -53,12 +53,12 @@
 // NOTE: OEMs can avoid the need to maintain/update the defaults.h and cpu_map.h files and use only
 // one configuration file by placing their specific defaults and pin map at the bottom of this file.
 // If doing so, simply comment out these two defines and see instructions below.
-//#define DEFAULTS_GENERIC
-//#define CPU_MAP_2560_INITIAL
+#define DEFAULTS_GENERIC
+#define CPU_MAP_2560_INITIAL
 
 // To use with RAMPS 1.4/1.6 Boards, comment out the above defines and uncomment the next two defines
-#define DEFAULTS_RAMPS_BOARD
-#define CPU_MAP_2560_RAMPS_BOARD
+// #define DEFAULTS_RAMPS_BOARD
+// #define CPU_MAP_2560_RAMPS_BOARD
 
 // Serial baud rate
 // #define BAUD_RATE 230400
@@ -206,7 +206,7 @@
 // NOTE: The top option will mask and invert all control pins. The bottom option is an example of
 // inverting only two control pins, the safety door and reset. See cpu_map.h for other bit definitions.
 // #define INVERT_CONTROL_PIN_MASK CONTROL_MASK // Default disabled. Uncomment to disable.
-// #define INVERT_CONTROL_PIN_MASK ((1<<CONTROL_SAFETY_DOOR_BIT)|(1<<CONTROL_RESET_BIT)) // Default disabled.
+#define INVERT_CONTROL_PIN_MASK ((1<<CONTROL_RESET_BIT)) // Default disabled.
 
 // Inverts select limit pin states based on the following mask. This effects all limit pin functions,
 // such as hard limits and homing. However, this is different from overall invert limits setting.
@@ -346,7 +346,7 @@
 // Sets which axis the tool length offset is applied. Assumes the spindle is always parallel with
 // the selected axis with the tool oriented toward the negative direction. In other words, a positive
 // tool length offset value is subtracted from the current location.
-#define TOOL_LENGTH_OFFSET_AXIS Z_AXIS // Default z-axis. Valid values are X_AXIS, Y_AXIS, or Z_AXIS.
+#define TOOL_LENGTH_OFFSET_AXIS Z_AXIS // Default z-axis. Valid values are X_AXIS, Y_AXIS, or Z_AXIS. //*TORESEARCH
 
 // Used by variable spindle output only. This forces the PWM output to a minimum duty cycle when enabled.
 // The PWM pin will still read 0V when the spindle is disabled. Most users will not need this option, but
@@ -649,8 +649,8 @@
 #define RPM_LINE_B4  1.151360e+03
 
 
-#define SPINDLE_STEPS_PER_REVOLUTION  200           // for stepper with 1.8 grad step
-#define SPINDLE_MICROSTEP_DIVIDER     32
+#define SPINDLE_STEPS_PER_REVOLUTION  400           // for stepper with 1.8 grad step
+#define SPINDLE_MICROSTEP_DIVIDER     10
 
 #define SPINDLE_ROTATION_ACCELERATION 10000 // For soft start/stop spindel. In RPM/s
 

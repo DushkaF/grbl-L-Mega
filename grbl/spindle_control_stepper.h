@@ -55,7 +55,7 @@ void spindle_set_speed(uint32_t freq_value, uint8_t state);
 uint16_t spindle_compute_pwm_value(float rpm);
   
 // Stop and start spindle routines. Called by all spindle routines and stepper ISR.
-void spindle_stop();
+void spindle_stop(uint8_t end_state);
 
 void spindle_speed_changing(float end_rpm, uint8_t end_state);
 

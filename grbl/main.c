@@ -87,7 +87,7 @@ int main(void)
     sys_rt_exec_alarm = 0;
     sys_rt_exec_motion_override = 0;
     sys_rt_exec_accessory_override = 0;
-    sys_rt_exec_spindel_state = EXEC_SPINDLE_DISABLED;
+    sys_rt_exec_spindel_state = EXEC_SPINDLE_HOLD;
 
     // Reset Grbl primary systems.
     serial_reset_read_buffer(); // Clear serial read buffer
@@ -110,6 +110,8 @@ int main(void)
 
     // Start Grbl main loop. Processes program inputs and executes them.
     protocol_main_loop();
+    
+    printString("Return");
   }
   return 0; /* Never reached */
 }

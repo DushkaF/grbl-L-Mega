@@ -92,7 +92,7 @@
 // Modal Group M4: Program flow
 #define PROGRAM_FLOW_RUNNING 0 // (Default: Must be zero)
 #define PROGRAM_FLOW_PAUSED 3 // M0
-#define PROGRAM_FLOW_OPTIONAL_STOP 1 // M1 NOTE: Not supported, but valid and ignored.
+#define PROGRAM_FLOW_OPTIONAL_STOP 1 // M1 NOTE: Not supported, but valid and ignored.  //TODO
 #define PROGRAM_FLOW_COMPLETED_M2  2 // M2 (Do not alter value)
 #define PROGRAM_FLOW_COMPLETED_M30 30 // M30 (Do not alter value)
 
@@ -112,6 +112,7 @@
 
 // Modal Group M7: Spindle control
 #define SPINDLE_DISABLE 0 // M5 (Default: Must be zero)
+#define SPINDLE_ENABLE_HOLD bit(2) // Hold spindel (keep enabled) in stop state  // TODO it is ok?
 #define SPINDLE_ENABLE_CW   PL_COND_FLAG_SPINDLE_CW // M3 (NOTE: Uses planner condition bit flag)
 #define SPINDLE_ENABLE_CCW  PL_COND_FLAG_SPINDLE_CCW // M4 (NOTE: Uses planner condition bit flag)
 
@@ -135,6 +136,11 @@
 
 // Modal Group G12: Active work coordinate system
 // N/A: Stores coordinate system value (54-59) to change to.
+
+// Modal Group G14: Spindle Control Mode
+#define RPM_SPEED_MODE 0              // G97 RPM mode (Default: Must be zero)
+#define CONSTANT_SURFACE_SPEED_MODE 1 // G96 Constant Surface Speed Mode
+
 
 // Define parameter word mapping.
 #define WORD_F  0
@@ -217,7 +223,7 @@ typedef struct {
 
   float spindle_speed;          // RPM
   float feed_rate;              // Millimeters/min
-  uint8_t tool;                 // Tracks tool number. NOT USED.
+  uint8_t tool;                 // Tracks tool number. NOT USED.  //TODO tool number
   int32_t line_number;          // Last line number sent
 
   float position[N_AXIS];       // Where the interpreter considers the tool to be at this point in the code

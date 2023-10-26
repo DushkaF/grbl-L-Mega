@@ -235,7 +235,7 @@ void st_wake_up()
   
   // Enable stepper drivers.
   // It is reverse implication for bits
-  #ifdef DEFAULTS_RAMPS_BOARD
+  #ifdef DEFAULTS_RAMPS_BOARD         // TODO rewrite for EXEC_SPINDLE_HOLD
     if (bit_istrue(settings.flags,BITFLAG_INVERT_ST_ENABLE)) {
     // Don't forget check spindle mode:
       #ifdef SPINDLE_COMBINE_AXIS
@@ -250,9 +250,9 @@ void st_wake_up()
     } else {
       // Don't forget check spindle mode:
       #ifdef SPINDLE_COMBINE_AXIS
-      STEPPER_DISABLE_PORT(0) &= ~((1 << STEPPER_DISABLE_BIT(0)) & ~((sys_rt_exec_spindel_state == EXEC_SPINDLE_DISABLED ? 0 : 1) << SPINDLE_ENABLE_BIT));
-      STEPPER_DISABLE_PORT(1) &= ~((1 << STEPPER_DISABLE_BIT(1)) & ~((sys_rt_exec_spindel_state == EXEC_SPINDLE_DISABLED ? 0 : 1) << SPINDLE_ENABLE_BIT));
-      STEPPER_DISABLE_PORT(2) &= ~((1 << STEPPER_DISABLE_BIT(2)) & ~((sys_rt_exec_spindel_state == EXEC_SPINDLE_DISABLED ? 0 : 1) << SPINDLE_ENABLE_BIT));
+        STEPPER_DISABLE_PORT(0) &= ~((1 << STEPPER_DISABLE_BIT(0)) & ~((sys_rt_exec_spindel_state == EXEC_SPINDLE_DISABLED ? 0 : 1) << SPINDLE_ENABLE_BIT));
+        STEPPER_DISABLE_PORT(1) &= ~((1 << STEPPER_DISABLE_BIT(1)) & ~((sys_rt_exec_spindel_state == EXEC_SPINDLE_DISABLED ? 0 : 1) << SPINDLE_ENABLE_BIT));
+        STEPPER_DISABLE_PORT(2) &= ~((1 << STEPPER_DISABLE_BIT(2)) & ~((sys_rt_exec_spindel_state == EXEC_SPINDLE_DISABLED ? 0 : 1) << SPINDLE_ENABLE_BIT));
       #else
         STEPPER_DISABLE_PORT(0) &= ~(1 << STEPPER_DISABLE_BIT(0));
         STEPPER_DISABLE_PORT(1) &= ~(1 << STEPPER_DISABLE_BIT(1));
@@ -264,8 +264,21 @@ void st_wake_up()
       st.step_outbits[idx] = step_port_invert_mask[idx];
     }
   #else
-    if (bit_istrue(settings.flags,BITFLAG_INVERT_ST_ENABLE)) { STEPPERS_DISABLE_PORT |= (1<<STEPPERS_DISABLE_BIT); }
-    else { STEPPERS_DISABLE_PORT &= ~(1<<STEPPERS_DISABLE_BIT); }
+    if (bit_istrue(settings.flags,BITFLAG_INVERT_ST_ENABLE)) {
+      // Don't forget check spindle mode:
+      #ifdef SPINDLE_COMBINE_AXIS
+        STEPPERS_DISABLE_PORT |= ((1<<STEPPERS_DISABLE_BIT) & ~(((sys_rt_exec_spindel_state & ((EXEC_SPINDLE_SYNCHRONIZED_CCW) | (EXEC_SPINDLE_SYNCHRONIZED_CW))) == 0 ? 0 : 1) << SPINDLE_ENABLE_BIT));
+      #else
+        STEPPERS_DISABLE_PORT |= (1<<STEPPERS_DISABLE_BIT); 
+      #endif
+       } else {  
+        // Don't forget check spindle mode:
+      #ifdef SPINDLE_COMBINE_AXIS
+        STEPPERS_DISABLE_PORT &= ~((1 << STEPPERS_DISABLE_BIT) & ~(((sys_rt_exec_spindel_state & ((EXEC_SPINDLE_SYNCHRONIZED_CCW) | (EXEC_SPINDLE_SYNCHRONIZED_CW))) == 0 ? 0 : 1) << SPINDLE_ENABLE_BIT));
+      #else
+        STEPPERS_DISABLE_PORT &= ~(1<<STEPPERS_DISABLE_BIT); 
+      #endif
+      }
     // Initialize stepper output bits to ensure first ISR call does not step.
     st.step_outbits = step_port_invert_mask;
   #endif // Ramps Board
@@ -332,8 +345,29 @@ void st_go_idle()
       #endif
     }
   #else
-    if (pin_state) { STEPPERS_DISABLE_PORT |= (1<<STEPPERS_DISABLE_BIT); }
-    else { STEPPERS_DISABLE_PORT &= ~(1<<STEPPERS_DISABLE_BIT); }
+    if (pin_state) {
+        // Don't forget check spindle mode:
+        #ifdef SPINDLE_COMBINE_AXIS
+          STEPPERS_DISABLE_PORT |= ((1<<STEPPERS_DISABLE_BIT) & ~(((sys_rt_exec_spindel_state & ((EXEC_SPINDLE_SYNCHRONIZED_CCW) | (EXEC_SPINDLE_SYNCHRONIZED_CW))) == 0 ? 0 : 1) << SPINDLE_ENABLE_BIT));
+        #else
+          STEPPERS_DISABLE_PORT |= (1<<STEPPERS_DISABLE_BIT);
+        #endif  
+      }
+    else { 
+        // Don't forget check spindle mode:
+        #ifdef SPINDLE_COMBINE_AXIS
+          STEPPERS_DISABLE_PORT &= ~((1<<STEPPERS_DISABLE_BIT) & ~(((sys_rt_exec_spindel_state & ((EXEC_SPINDLE_SYNCHRONIZED_CCW) | (EXEC_SPINDLE_SYNCHRONIZED_CW))) == 0 ? 0 : 1) << SPINDLE_ENABLE_BIT));
+        #else
+          STEPPERS_DISABLE_PORT &= ~(1<<STEPPERS_DISABLE_BIT); 
+        #endif
+      }
+    // uint8_t state_stepper = sys_rt_exec_spindel_state & ((EXEC_SPINDLE_SYNCHRONIZED_CCW) | (EXEC_SPINDLE_SYNCHRONIZED_CW));
+    // uint8_t state_stepper_f = ((sys_rt_exec_spindel_state & ((EXEC_SPINDLE_SYNCHRONIZED_CCW) | (EXEC_SPINDLE_SYNCHRONIZED_CW))) == 0 ? 0 : 1);
+    // print_uint8_base2_ndigit(state_stepper, 8);
+    // report_util_line_feed();
+    // print_uint8_base2_ndigit(state_stepper_f, 8);
+    // report_util_line_feed();
+
   #endif // Ramps Board
 }
 
@@ -408,7 +442,12 @@ ISR(TIMER1_COMPA_vect)
       DIRECTION_PORT(2) = (DIRECTION_PORT(2) & ~(1 << DIRECTION_BIT(2))) | st.dir_outbits[2];
     #endif
   #else
-    DIRECTION_PORT = (DIRECTION_PORT & ~DIRECTION_MASK) | (st.dir_outbits & DIRECTION_MASK);
+    #ifdef SPINDLE_COMBINE_AXIS
+      uint8_t spindle_dir_enable = (((sys_rt_exec_spindel_state & ((EXEC_SPINDLE_SYNCHRONIZED_CCW) | (EXEC_SPINDLE_SYNCHRONIZED_CW))) == 0 ? 0 : 1) << SPINDLE_DIRECTION_BIT);
+      DIRECTION_PORT = (DIRECTION_PORT & ~DIRECTION_MASK) | ((spindle_dir_enable & DIRECTION_PORT) | (st.dir_outbits & (~spindle_dir_enable)));
+    #else
+      DIRECTION_PORT = (DIRECTION_PORT & ~DIRECTION_MASK) | (st.dir_outbits & DIRECTION_MASK);
+    #endif
   #endif // Ramps Board
 
   // Then pulse the stepping pins
@@ -436,7 +475,13 @@ ISR(TIMER1_COMPA_vect)
     #ifdef STEP_PULSE_DELAY
       st.step_bits = (STEP_PORT & ~STEP_MASK) | st.step_outbits; // Store out_bits to prevent overwriting.
     #else  // Normal operation
-      STEP_PORT = (STEP_PORT & ~STEP_MASK) | st.step_outbits;
+      // Don't forget check spindle mode:
+      #ifdef SPINDLE_COMBINE_AXIS
+        uint8_t spindle_control_enable = (((sys_rt_exec_spindel_state & ((EXEC_SPINDLE_SYNCHRONIZED_CCW) | (EXEC_SPINDLE_SYNCHRONIZED_CW))) == 0 ? 0 : 1) << SPINDLE_CONTROL_BIT);
+        STEP_PORT = (STEP_PORT & ~STEP_MASK) | ((spindle_control_enable & STEP_PORT) | (st.step_outbits & (~spindle_control_enable)));
+      #else
+        STEP_PORT = (STEP_PORT & ~STEP_MASK) | st.step_outbits;
+      #endif
     #endif
   #endif // Ramps Board
 
@@ -629,7 +674,12 @@ ISR(TIMER0_OVF_vect)
     #endif
 
   #else
-    STEP_PORT = (STEP_PORT & ~STEP_MASK) | (step_port_invert_mask & STEP_MASK);
+    #ifdef SPINDLE_COMBINE_AXIS
+      uint8_t spindle_control_enable = (((sys_rt_exec_spindel_state & ((EXEC_SPINDLE_SYNCHRONIZED_CCW) | (EXEC_SPINDLE_SYNCHRONIZED_CW))) == 0 ? 0 : 1) << SPINDLE_CONTROL_BIT);
+      STEP_PORT = (STEP_PORT & ~STEP_MASK) | ((spindle_control_enable & STEP_PORT) | (step_port_invert_mask & (~spindle_control_enable)));
+    #else
+      STEP_PORT = (STEP_PORT & ~STEP_MASK) | (step_port_invert_mask & STEP_MASK);
+    #endif
   #endif // Ramps Board
   TCCR0B = 0; // Disable Timer0 to prevent re-entering this interrupt when it's not needed.
 }
@@ -734,10 +784,19 @@ void st_reset()
     // DIRECTION_PORT(2) = (DIRECTION_PORT(2) & ~(1 << DIRECTION_BIT(2))) | dir_port_invert_mask[2];
   #else
     st.dir_outbits = dir_port_invert_mask; // Initialize direction bits to default.
+    uint8_t spindle_control_enable = (((sys_rt_exec_spindel_state & ((EXEC_SPINDLE_SYNCHRONIZED_CCW) | (EXEC_SPINDLE_SYNCHRONIZED_CW))) == 0 ? 0 : 1) << SPINDLE_CONTROL_BIT);
+    uint8_t spindle_dir_enable = (((sys_rt_exec_spindel_state & ((EXEC_SPINDLE_SYNCHRONIZED_CCW) | (EXEC_SPINDLE_SYNCHRONIZED_CW))) == 0 ? 0 : 1) << SPINDLE_DIRECTION_BIT);
+    
 
-    // Initialize step and direction port pins.
-    STEP_PORT = (STEP_PORT & ~STEP_MASK) | step_port_invert_mask;
-    DIRECTION_PORT = (DIRECTION_PORT & ~DIRECTION_MASK) | dir_port_invert_mask;
+    #ifdef SPINDLE_COMBINE_AXIS
+      STEP_PORT = (STEP_PORT & ~STEP_MASK) | ((spindle_control_enable & STEP_PORT) | (step_port_invert_mask & (~spindle_control_enable)));
+      DIRECTION_PORT = (DIRECTION_PORT & ~DIRECTION_MASK) | ((spindle_dir_enable & DIRECTION_PORT) | (dir_port_invert_mask & (~spindle_dir_enable)));
+    #else
+      // Initialize step and direction port pins.
+      STEP_PORT = (STEP_PORT & ~STEP_MASK) | step_port_invert_mask;
+      DIRECTION_PORT = (DIRECTION_PORT & ~DIRECTION_MASK) | dir_port_invert_mask;
+    #endif
+
   #endif // Ramps Board
 }
 

@@ -64,7 +64,7 @@
 #include "jog.h"
 #include "sleep.h"
 #include "timekeeper.h"
-#include "threading.h"
+#include "threading.h" // it used now in gcode.h
 
 // ---------------------------------------------------------------------------------------
 // COMPILE-TIME ERROR CHECKING OF DEFINE VALUES:

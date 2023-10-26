@@ -332,6 +332,7 @@ void report_gcode_modes()
   switch (gc_state.modal.spindle) {
     case SPINDLE_ENABLE_CW : serial_write('3'); break;
     case SPINDLE_ENABLE_CCW : serial_write('4'); break;
+    case SPINDLE_ENABLE_HOLD: ;
     case SPINDLE_DISABLE : serial_write('5'); break;
   }
 

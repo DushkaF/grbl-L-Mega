@@ -259,7 +259,7 @@ uint8_t gc_execute_line(char *line)
             switch(int_value) {
               case 3: gc_block.modal.spindle = SPINDLE_ENABLE_CW; break;
               case 4: gc_block.modal.spindle = SPINDLE_ENABLE_CCW; break;
-              case 5: gc_block.modal.spindle = SPINDLE_DISABLE; break;
+              case 5: gc_block.modal.spindle = SPINDLE_ENABLE_HOLD; break;    // not disable, hold. For disable use another 
             }
             break;            
           case 7: case 8: case 9:
@@ -297,7 +297,7 @@ uint8_t gc_execute_line(char *line)
           // case 'C': // Not supported
           // case 'D': // Not supported
           case 'F': word_bit = WORD_F; gc_block.values.f = value; break;
-          // case 'H': // Not supported
+          // case 'H': // Not supported  //TODO make support in G43 parse
           case 'I': word_bit = WORD_I; gc_block.values.ijk[X_AXIS] = value; ijk_words |= (1<<X_AXIS); break;
           case 'J': word_bit = WORD_J; gc_block.values.ijk[Y_AXIS] = value; ijk_words |= (1<<Y_AXIS); break;
           case 'K': word_bit = WORD_K; gc_block.values.ijk[Z_AXIS] = value; ijk_words |= (1<<Z_AXIS); break;  //K is also used in G33
@@ -365,7 +365,7 @@ uint8_t gc_execute_line(char *line)
   if (axis_words) {
     if (!axis_command) { axis_command = AXIS_COMMAND_MOTION_MODE; } // Assign implicit motion-mode
     // Check spindle mode, if use stepper like a spindle. For your safe!
-    if ((axis_command == AXIS_COMMAND_MOTION_MODE || axis_command == NON_MODAL_GO_HOME_0) && axis_words & (1 << SPINDLE_COMBINE_AXIS) && sys_rt_exec_spindel_state != EXEC_SPINDLE_DISABLED) 
+    if ((axis_command == AXIS_COMMAND_MOTION_MODE || axis_command == NON_MODAL_GO_HOME_0) && axis_words & (1 << SPINDLE_COMBINE_AXIS) && (sys_rt_exec_spindel_state != EXEC_SPINDLE_DISABLED && sys_rt_exec_spindel_state != EXEC_SPINDLE_HOLD)) 
     {
       FAIL(STATUS_SPINDLE_MODE_AND_AXIS_MOTION_CONFLICT);
      } // For safe your soul)
@@ -623,7 +623,7 @@ uint8_t gc_execute_line(char *line)
             }
           } else {
             // Check spindle mode, if use stepper like a spindle. For your safe!
-            if (!(axis_words & (1<<SPINDLE_COMBINE_AXIS)) && sys_rt_exec_spindel_state != EXEC_SPINDLE_DISABLED) 
+            if (!(axis_words & (1<<SPINDLE_COMBINE_AXIS)) && (sys_rt_exec_spindel_state != EXEC_SPINDLE_DISABLED && sys_rt_exec_spindel_state != EXEC_SPINDLE_HOLD)) 
             { gc_block.values.ijk[SPINDLE_COMBINE_AXIS] = gc_state.position[SPINDLE_COMBINE_AXIS]; } // For safe your soul
 
             axis_command = AXIS_COMMAND_NONE; // Set to none if no intermediate motion.
@@ -924,7 +924,7 @@ uint8_t gc_execute_line(char *line)
 
   // [4. Set spindle speed ]:
   if ((gc_state.spindle_speed != gc_block.values.s) || bit_istrue(gc_parser_flags,GC_PARSER_LASER_FORCE_SYNC)) {
-    if (gc_state.modal.spindle != SPINDLE_DISABLE) { 
+    if (gc_state.modal.spindle != SPINDLE_DISABLE || gc_state.modal.spindle != SPINDLE_ENABLE_HOLD) { 
       if (bit_isfalse(gc_parser_flags,GC_PARSER_LASER_ISMOTION)) {
         if (bit_istrue(gc_parser_flags,GC_PARSER_LASER_DISABLE)) {
            spindle_sync(gc_state.modal.spindle, 0.0);
@@ -1125,7 +1125,7 @@ uint8_t gc_execute_line(char *line)
       gc_state.modal.feed_rate = FEED_RATE_MODE_UNITS_PER_MIN;
       // gc_state.modal.cutter_comp = CUTTER_COMP_DISABLE; // Not supported.
       gc_state.modal.coord_select = 0; // G54
-      gc_state.modal.spindle = SPINDLE_DISABLE;
+      gc_state.modal.spindle = SPINDLE_ENABLE_HOLD; // for hold spindle after program
       gc_state.modal.coolant = COOLANT_DISABLE;
       #ifdef ENABLE_PARKING_OVERRIDE_CONTROL
         #ifdef DEACTIVATE_PARKING_UPON_INIT

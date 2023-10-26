@@ -246,6 +246,7 @@ void protocol_exec_rt_system()
   }
   //processing spindle index and synchronization pulses. Is done immediately after processing of the alarm to be as accurate as possible
   //depending on settings, reports are triggered.
+  //* TORESEARCH spindel sincronisation
   if (bit_istrue(threading_exec_flags, EXEC_SPINDLE_INDEX_PULSE)) {                         // Process the detection of a spindle index pulse;
     if (settings.sync_pulses_per_revolution>0)	{											                      // If index pulses are enabled.
       calculate_spindle_rpm();														                            // Process the pulse so the RPM will be updated in the real time status report
@@ -689,7 +690,7 @@ static void protocol_exec_rt_suspend()
                 #endif
 
                 // Delayed Tasks: Restart spindle and coolant, delay to power-up, then resume cycle.
-                if (gc_state.modal.spindle != SPINDLE_DISABLE) {
+                if (gc_state.modal.spindle != SPINDLE_DISABLE || gc_state.modal.spindle != SPINDLE_ENABLE_HOLD) {
                   // Block if safety door re-opened during prior restore actions.
                   if (bit_isfalse(sys.suspend,SUSPEND_RESTART_RETRACT)) {
                     if (bit_istrue(settings.flags,BITFLAG_LASER_MODE)) {
@@ -745,15 +746,15 @@ static void protocol_exec_rt_suspend()
               if (sys.spindle_stop_ovr) {
                 // Handles beginning of spindle stop
                 if (sys.spindle_stop_ovr & SPINDLE_STOP_OVR_INITIATE) {
-                  if (gc_state.modal.spindle != SPINDLE_DISABLE) {
-                    spindle_set_state(SPINDLE_DISABLE,0.0); // De-energize
+                  if (gc_state.modal.spindle != SPINDLE_DISABLE || gc_state.modal.spindle != SPINDLE_ENABLE_HOLD) {
+                    spindle_set_state(SPINDLE_DISABLE, 0.0); // De-energize
                     sys.spindle_stop_ovr = SPINDLE_STOP_OVR_ENABLED; // Set stop override state to enabled, if de-energized.
                     } else {
                     sys.spindle_stop_ovr = SPINDLE_STOP_OVR_DISABLED; // Clear stop override state
                   }
                   // Handles restoring of spindle state
                   } else if (sys.spindle_stop_ovr & (SPINDLE_STOP_OVR_RESTORE | SPINDLE_STOP_OVR_RESTORE_CYCLE)) {
-                  if (gc_state.modal.spindle != SPINDLE_DISABLE) {
+                  if (gc_state.modal.spindle != SPINDLE_DISABLE || gc_state.modal.spindle != SPINDLE_ENABLE_HOLD) {
                     report_feedback_message(MESSAGE_SPINDLE_RESTORE);
                     if (bit_istrue(settings.flags,BITFLAG_LASER_MODE)) {
                       // When in laser mode, ignore spindle spin-up delay. Set to turn on laser when cycle starts.
