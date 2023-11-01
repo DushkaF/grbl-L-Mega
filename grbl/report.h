@@ -91,6 +91,7 @@
 #define MESSAGE_RESTORE_DEFAULTS 9
 #define MESSAGE_SPINDLE_RESTORE 10
 #define MESSAGE_SLEEP_MODE 11
+#define MESSAGE_RESET_PRESS 12
 
 // Internal report utilities to reduce flash with repetitive tasks turned into functions.
 

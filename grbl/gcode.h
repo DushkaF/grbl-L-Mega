@@ -40,6 +40,7 @@
 #define MODAL_GROUP_G8 8 // [G43.1,G49] Tool length offset
 #define MODAL_GROUP_G12 9 // [G54,G55,G56,G57,G58,G59] Coordinate system selection
 #define MODAL_GROUP_G13 10 // [G61] Control mode
+#define MODAL_GROUP_G14 11 // [G96,G97] Spindle Control Mode
 
 #define MODAL_GROUP_M4 11  // [M0,M1,M2,M30] Stopping
 #define MODAL_GROUP_M7 12 // [M3,M4,M5] Spindle turning
@@ -187,20 +188,21 @@
 
 // NOTE: When this struct is zeroed, the above defines set the defaults for the system.
 typedef struct {
-  uint8_t motion;          // {G0,G1,G2,G3,G38.2,G80}
-  uint8_t feed_rate;       // {G93,G94}
-  uint8_t units;           // {G20,G21}
-  uint8_t distance;        // {G90,G91}
-  // uint8_t distance_arc; // {G91.1} NOTE: Don't track. Only default supported.
-  uint8_t plane_select;    // {G17,G18,G19}
-  // uint8_t cutter_comp;  // {G40} NOTE: Don't track. Only default supported.
-  uint8_t tool_length;     // {G43.1,G49}
-  uint8_t coord_select;    // {G54,G55,G56,G57,G58,G59}
-  // uint8_t control;      // {G61} NOTE: Don't track. Only default supported.
-  uint8_t program_flow;    // {M0,M1,M2,M30}
-  uint8_t coolant;         // {M7,M8,M9}
-  uint8_t spindle;         // {M3,M4,M5}
-  uint8_t override;        // {M56}
+  uint8_t motion;            // {G0,G1,G2,G3,G38.2,G80}
+  uint8_t feed_rate;         // {G93,G94}
+  uint8_t units;             // {G20,G21}
+  uint8_t distance;          // {G90,G91}
+  // uint8_t distance_arc;   // {G91.1} NOTE: Don't track. Only default supported.
+  uint8_t plane_select;      // {G17,G18,G19}
+  // uint8_t cutter_comp;    // {G40} NOTE: Don't track. Only default supported.
+  uint8_t tool_length;       // {G43.1,G49}
+  uint8_t coord_select;      // {G54,G55,G56,G57,G58,G59}
+  // uint8_t control;        // {G61} NOTE: Don't track. Only default supported.
+  // uint9_t spindle_ mode;  // {G96,G97}
+  uint8_t program_flow;      // {M0,M1,M2,M30}
+  uint8_t coolant;           // {M7,M8,M9}
+  uint8_t spindle;           // {M3,M4,M5}
+  uint8_t override;          // {M56}
 } gc_modal_t;
 
 typedef struct {

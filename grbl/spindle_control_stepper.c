@@ -86,7 +86,7 @@ void spindle_init()
   SPINDLE_DIRECTION_DDR |= (1 << SPINDLE_DIRECTION_BIT); // Configure as output pin.
 
   freq_gradient = (1.0 / 60.0) * (360.0 * SPINDLE_MICROSTEP_DIVIDER / 1.8);
-  spindle_stop(SPINDLE_ENABLE_HOLD);
+  // spindle_stop(SPINDLE_ENABLE_HOLD);
 }
 
 uint8_t spindle_get_state()   // TODO write for hold 
@@ -122,16 +122,29 @@ void spindle_stop(uint8_t end_state)
     #else
       SPINDLE_ENABLE_PORT &= ~(1 << SPINDLE_ENABLE_BIT); // Set pin to low
     #endif
+  } else{
+    #ifdef INVERT_SPINDLE_ENABLE_PIN
+      SPINDLE_ENABLE_PORT &= ~(1 << SPINDLE_ENABLE_BIT); // Set pin to low
+    #else
+      SPINDLE_ENABLE_PORT |= (1 << SPINDLE_ENABLE_BIT); // Set pin to high
+    #endif
   }
   SPINDLE_TIMSK_REGISTER &= ~(1 << SPINDLE_OCIE_BIT);  // turn off SPINDLE_TIMER
   SPINDLE_CONTROL_PORT &= ~(1 << SPINDLE_CONTROL_BIT); // set step pin low
   sei();
+  printString("Spindle state is ");
+  print_uint8_base2_ndigit(bit_isfalse(SPINDLE_ENABLE_PORT, (1 << SPINDLE_ENABLE_BIT)), 8);
+  report_util_line_feed();
 }
 
 // Sets spindle speed PWM output and enable pin, if configured. Called by spindle_set_state()
 // and stepper ISR. Keep routine small and efficient.
 void spindle_set_speed(uint32_t freq_value, uint8_t state)
 {
+  if (sys.abort) { return;} // Block during abort.
+  if (bit_istrue(sys_rt_exec_state, EXEC_RESET)){
+    return;
+  }
   if (state == SPINDLE_ENABLE_CW) // Set direction
   {
     SPINDLE_DIRECTION_PORT &= ~(1 << SPINDLE_DIRECTION_BIT);
@@ -158,6 +171,11 @@ void spindle_set_speed(uint32_t freq_value, uint8_t state)
 #endif
   }
 #else
+
+  if (sys.abort) { return;} // Block during abort.
+  if (bit_istrue(sys_rt_exec_state, EXEC_RESET)){
+    return;
+  }
   if (freq_value == SPINDLE_RPM_OFF_VALUE)
   {
     SPINDLE_TIMSK_REGISTER &= ~(1 << SPINDLE_OCIE_BIT);  // turn off SPINDLE_TIMER
@@ -197,14 +215,9 @@ uint32_t spindle_compute_freq_value(float rpm) // Mega2560 PWM register is 16-bi
 // sleep, and spindle stop override.
 void spindle_set_state(uint8_t state, float rpm)
 {
-  if (sys.abort)
-  {
-    return;
-  } // Block during abort.
+  if (sys.abort) { return; } // Block during abort.
   if (state == SPINDLE_DISABLE || state == SPINDLE_ENABLE_HOLD)
-  { // Halt or set spindle direction and rpm.
-    // sys.spindle_speed = 0.0;
-    //    spindle_stop();
+  { 
     rpm = 0.0;
   }
   else
@@ -241,7 +254,6 @@ void spindle_set_state(uint8_t state, float rpm)
     {
       rpm = settings.rpm_min;
     }
-
     spindle_speed_changing(rpm, state);
   }
 
@@ -258,8 +270,13 @@ void spindle_speed_changing(float end_rpm, uint8_t end_state)
   sys_rt_exec_spindel_state |= EXEC_SPINDLE_CHANGING_SPEED; // Set changing speed flag
   while ((((end_speed_signed - now_speed_signed) >= 0 ? 1.0 : -1.0) == ((end_speed_signed - (now_speed_signed + increment)) >= 0 ? 1.0 : -1.0)))
   {
+    if (bit_istrue(sys_rt_exec_state, EXEC_RESET)){
+      return;
+    }
     now_speed_signed += increment;
     spindle_set_speed(spindle_compute_freq_value(abs(now_speed_signed)), (now_speed_signed > 0 ? EXEC_SPINDLE_SYNCHRONIZED_CW : EXEC_SPINDLE_SYNCHRONIZED_CCW));
+    // printFloat(now_speed_signed, 0);
+    // report_util_line_feed();
     delay_us(10);
   }
   sys_rt_exec_spindel_state &= ~EXEC_SPINDLE_CHANGING_SPEED; // Clear changing speed flag

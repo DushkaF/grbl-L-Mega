@@ -55,6 +55,7 @@ void protocol_main_loop()
     } else {
     // Check if the safety door is open.
     sys.state = STATE_IDLE;
+    spindle_stop(SPINDLE_ENABLE_HOLD);    // Hold spindle
     if (system_check_safety_door_ajar()) {
       bit_true(sys_rt_exec_state, EXEC_SAFETY_DOOR);
       protocol_execute_realtime(); // Enter safety door mode. Should return as IDLE state.
@@ -231,7 +232,7 @@ void protocol_exec_rt_system()
     sys.state = STATE_ALARM; // Set system alarm state
     report_alarm_message(rt_exec);
     // Halt everything upon a critical event flag. Currently hard and soft limits flag this.
-    if ((rt_exec == EXEC_ALARM_HARD_LIMIT) || (rt_exec == EXEC_ALARM_SOFT_LIMIT)) {
+    if ((rt_exec == EXEC_ALARM_HARD_LIMIT) || (rt_exec == EXEC_ALARM_SOFT_LIMIT)) {  // TODO Split Hard and soft!
       report_feedback_message(MESSAGE_CRITICAL_EVENT);
       system_clear_exec_state_flag(EXEC_RESET); // Disable any existing reset
       do {
@@ -251,7 +252,7 @@ void protocol_exec_rt_system()
     if (settings.sync_pulses_per_revolution>0)	{											                      // If index pulses are enabled.
       calculate_spindle_rpm();														                            // Process the pulse so the RPM will be updated in the real time status report
       if (spindle_synchronization_active()) {												                        // if spindle synchronization is active
-        if bit_istrue(settings.status_report_mask,BITFLAG_RT_STATUS_SYNC_STATE){			      // if setting report mask is set for reporting the synchronization status in the real time status report
+        if bit_istrue(settings.status_report_mask,BITFLAG_RT_STATUS_SYNC_STATE){			      // if setting report mask is set for reporting the synchronization status in the real time status report //TORESEARCH
           system_set_threading_exec_flag(EXEC_SYNCHRONIZATION_STATE_REPORT);				        // set the reporting flags to report the synchronization status now and once when finished
         }
         if bit_istrue(settings.status_report_mask,BITFLAG_FEED_BACK_SYNC_STATUS){			      // if setting report mask is set for synchronization error feedback

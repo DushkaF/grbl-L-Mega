@@ -69,10 +69,21 @@ int main(void)
   }
 #endif
 
+  // Check RESET button
+  uint8_t pin = system_control_get_state();
+  if(bit_istrue(pin,CONTROL_PIN_INDEX_RESET)){
+    sys.state = STATE_ALARM;
+  }
+
   // Grbl initialization loop upon power-up or a system abort. For the latter, all processes
   // will return to this loop to be cleanly re-initialized.
   for (;;)
   {
+    // Check RESET button
+    uint8_t pin = system_control_get_state();
+    if(bit_istrue(pin,CONTROL_PIN_INDEX_RESET)){
+      sys.state = STATE_ALARM;
+    }
 
     // Reset system variables.
     uint8_t prior_state = sys.state;
@@ -110,8 +121,6 @@ int main(void)
 
     // Start Grbl main loop. Processes program inputs and executes them.
     protocol_main_loop();
-    
-    printString("Return");
   }
   return 0; /* Never reached */
 }

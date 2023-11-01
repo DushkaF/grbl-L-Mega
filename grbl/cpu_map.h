@@ -63,7 +63,8 @@
   #define LIMIT_PIN       PINB
   #define X_LIMIT_BIT     4 // MEGA2560 Digital Pin 10
   #define Y_LIMIT_BIT     5 // MEGA2560 Digital Pin 11 
-  #define Z_LIMIT_BIT     6 // MEGA2560 Digital Pin 12
+  #define Z_LIMIT_BIT     4 // MEGA2560 Digital Pin 10        // Use one port for both limits
+  // #define Z_LIMIT_BIT     6 // MEGA2560 Digital Pin 12
   #define LIMIT_INT       PCIE0  // Pin change interrupt enable pin
   #define LIMIT_INT_vect  PCINT0_vect 
   #define LIMIT_PCMSK     PCMSK0 // Pin change interrupt register

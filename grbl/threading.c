@@ -71,7 +71,7 @@ void process_spindle_index_pulse()
 	threading_index_timer_tics_passed=get_timer_ticks()-threading_index_Last_timer_tics;		    // Calculate the time between index pulses
 	threading_index_Last_timer_tics+=threading_index_timer_tics_passed;							            // adjust for calculating the next time
 	threading_index_pulse_count++;		
-  system_set_threading_exec_flag(EXEC_SPINDLE_INDEX_PULSE);			// Signal the receive of an index pulse
+  	system_set_threading_exec_flag(EXEC_SPINDLE_INDEX_PULSE);			// Signal the receive of an index pulse
 }
 
 // This calculated spindle speed is used for showing the actual spindle speed in the report
@@ -85,8 +85,8 @@ void process_spindle_synchronization_pulse()
 {
 	threading_sync_timer_tics_passed=get_timer_ticks()-threading_sync_Last_timer_tics;	      	// Calculate the time between synchronization pulses
 	threading_sync_Last_timer_tics+=threading_sync_timer_tics_passed;						                // adjust for calculating the next time
-  threading_sync_pulse_count++;                                                               // Update the sync pulse counter
-  system_set_threading_exec_flag(EXEC_PLANNER_SYNC_PULSE);                                    // Signal the receive of an synchronization pulse
+  	threading_sync_pulse_count++;                                                               // Update the sync pulse counter
+  	system_set_threading_exec_flag(EXEC_PLANNER_SYNC_PULSE);                                    // Signal the receive of an synchronization pulse
 }
 											                                 
 // This routine does the processing needed to keep the Z-axis in sync with the spindle during a threading pass G33

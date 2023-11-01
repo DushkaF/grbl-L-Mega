@@ -91,7 +91,7 @@ ISR(CONTROL_INT_vect){
 	    if (settings.sync_pulses_per_revolution>1) { 							    // If G33 is configured for synchronization pulses
       debounce_sync_pulse();                                        // debounce the synchronization pulse
 	    }
-#endif
+#endif //TORESEARCH
 	  }
   }
 }   
@@ -170,8 +170,13 @@ uint8_t system_execute_line(char *line)
           if (sys.state == STATE_ALARM) {
             // Block if safety door is ajar.
             if (system_check_safety_door_ajar()) { return(STATUS_CHECK_DOOR); }
+            if (system_control_get_state() & CONTROL_PIN_INDEX_RESET) { // Block if reset is pressed.
+              report_feedback_message(MESSAGE_RESET_PRESS);
+              return(STATUS_SYSTEM_GC_LOCK);
+            }
             report_feedback_message(MESSAGE_ALARM_UNLOCK);
             sys.state = STATE_IDLE;
+            spindle_stop(SPINDLE_ENABLE_HOLD);    // Hold spindle
             // Don't run startup script. Prevents stored moves in startup from causing accidents.
           } // Otherwise, no effect.
           break;
@@ -188,6 +193,10 @@ uint8_t system_execute_line(char *line)
         case 'H' : // Perform homing cycle [IDLE/ALARM]
           if (bit_isfalse(settings.flags,BITFLAG_HOMING_ENABLE)) {return(STATUS_SETTING_DISABLED); }
           if (system_check_safety_door_ajar()) { return(STATUS_CHECK_DOOR); } // Block if safety door is ajar.
+          if (system_control_get_state() & CONTROL_PIN_INDEX_RESET) { // Block if reset is pressed.
+            report_feedback_message(MESSAGE_RESET_PRESS);
+              return(STATUS_SYSTEM_GC_LOCK);
+            }
           sys.state = STATE_HOMING; // Set system state variable
           if (line[2] == 0) {
             mc_homing_cycle(HOMING_CYCLE_ALL);
@@ -203,6 +212,7 @@ uint8_t system_execute_line(char *line)
           } else { return(STATUS_INVALID_STATEMENT); }
           if (!sys.abort) {  // Execute startup scripts after successful homing.
             sys.state = STATE_IDLE; // Set to IDLE when complete.
+            spindle_stop(SPINDLE_ENABLE_HOLD);    // Hold spindle
             st_go_idle(); // Set steppers to the settings idle state before returning.
             if (line[2] == 0) { system_execute_startup(line); }
           }
@@ -419,7 +429,7 @@ void system_clear_exec_accessory_overrides() {
   SREG = sreg;
 }
 
-void system_set_threading_exec_flag(uint8_t mask) {
+void system_set_threading_exec_flag(uint8_t mask) {   //TORESEARCH
   uint8_t sreg = SREG;
   cli();
   threading_exec_flags |= (mask);

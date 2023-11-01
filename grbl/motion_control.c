@@ -370,8 +370,8 @@ void mc_reset()
     system_set_exec_state_flag(EXEC_RESET);
 
     // Kill spindle and coolant.
-    // spindle_stop(); // Spindle will be killing you
-    spindle_set_state(SPINDLE_DISABLE, 0.0);
+    spindle_stop(SPINDLE_DISABLE); // Spindle will be killing you
+    // spindle_set_state(SPINDLE_DISABLE, 0.0);
     coolant_stop();
 
     // Kill steppers only if in any motion state, i.e. cycle, actively holding, or homing.
@@ -379,7 +379,8 @@ void mc_reset()
     // the steppers enabled by avoiding the go_idle call altogether, unless the motion state is
     // violated, by which, all bets are off.
     if ((sys.state & (STATE_CYCLE | STATE_HOMING | STATE_JOG)) ||
-    		(sys.step_control & (STEP_CONTROL_EXECUTE_HOLD | STEP_CONTROL_EXECUTE_SYS_MOTION))) {
+    		(sys.step_control & (STEP_CONTROL_EXECUTE_HOLD | STEP_CONTROL_EXECUTE_SYS_MOTION) || 
+        (sys_rt_exec_spindel_state & (EXEC_SPINDLE_CHANGING_SPEED | EXEC_SPINDLE_SYNCHRONIZED_CW | EXEC_SPINDLE_SYNCHRONIZED_CCW)))) {
       if (sys.state == STATE_HOMING) { 
         if (!sys_rt_exec_alarm) {system_set_exec_alarm(EXEC_ALARM_HOMING_FAIL_RESET); }
       } else { system_set_exec_alarm(EXEC_ALARM_ABORT_CYCLE); }

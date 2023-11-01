@@ -175,6 +175,8 @@ void report_feedback_message(uint8_t message_code)
       printPgmString(PSTR("Restoring spindle")); break;
     case MESSAGE_SLEEP_MODE:
       printPgmString(PSTR("Sleeping")); break;
+    case MESSAGE_RESET_PRESS:
+      printPgmString(PSTR("Release RESET")); break;
   }
   report_util_feedback_line_feed();
 }

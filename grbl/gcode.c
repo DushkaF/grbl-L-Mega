@@ -232,6 +232,14 @@ uint8_t gc_execute_line(char *line)
             if (mantissa != 0) { FAIL(STATUS_GCODE_UNSUPPORTED_COMMAND); } // [G61.1 not supported]
             // gc_block.modal.control = CONTROL_MODE_EXACT_PATH; // G61
             break;
+
+          /*--------------- Lathe Gcodes ---------------*/
+
+          case 97:    // TODO
+            word_bit = MODAL_GROUP_G14;
+            // NOTE: Not required since feed per revolution is always disabled. Only here
+            // to support G97 commands that often appear in g-code program headers to setup defaults.
+            break;
           default: FAIL(STATUS_GCODE_UNSUPPORTED_COMMAND); // [Unsupported G command]
         }
         if (mantissa > 0) { FAIL(STATUS_GCODE_COMMAND_VALUE_NOT_INTEGER); } // [Unsupported or invalid Gxx.x command]
@@ -250,7 +258,7 @@ uint8_t gc_execute_line(char *line)
             word_bit = MODAL_GROUP_M4;
             switch(int_value) {
               case 0: gc_block.modal.program_flow = PROGRAM_FLOW_PAUSED; break; // Program pause
-              case 1: break; // Optional stop not supported. Ignore.
+              case 1: break; // Optional stop not supported. Ignore. //TODO
               default: gc_block.modal.program_flow = int_value; // Program end and reset
             }
             break;
@@ -1145,7 +1153,7 @@ uint8_t gc_execute_line(char *line)
       if (sys.state != STATE_CHECK_MODE) {
         if (!(settings_read_coord_data(gc_state.modal.coord_select,gc_state.coord_system))) { FAIL(STATUS_SETTING_READ_FAIL); }
         system_flag_wco_change(); // Set to refresh immediately just in case something altered.
-        spindle_set_state(SPINDLE_DISABLE, 0.0);
+        spindle_set_state(SPINDLE_ENABLE_HOLD, 0.0);
         coolant_set_state(COOLANT_DISABLE);
       }
       report_feedback_message(MESSAGE_PROGRAM_END);
