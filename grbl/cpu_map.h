@@ -63,7 +63,7 @@
   #define LIMIT_PIN       PINB
   #define X_LIMIT_BIT     4 // MEGA2560 Digital Pin 10
   #define Y_LIMIT_BIT     5 // MEGA2560 Digital Pin 11 
-  #define Z_LIMIT_BIT     4 // MEGA2560 Digital Pin 10        // Use one port for both limits
+  #define Z_LIMIT_BIT     4 // MEGA2560 Digital Pin 10        // Use one port for both limits (!)
   // #define Z_LIMIT_BIT     6 // MEGA2560 Digital Pin 12
   #define LIMIT_INT       PCIE0  // Pin change interrupt enable pin
   #define LIMIT_INT_vect  PCINT0_vect 
@@ -100,7 +100,7 @@
   #define PROBE_BIT       7  // MEGA2560 Analog Pin 15
   #define PROBE_MASK      (1<<PROBE_BIT)
 
-  #define SPINDLE_COMBINE_AXIS Y_AXIS   // Set the axis combined with the spindle
+  #define SPINDLE_COMBINE_AXIS (Y_AXIS)   // Set the axis combined with the spindle. Now, it's only supported axis(
 
     // Advanced Configuration Below You should not need to touch these variables
 
@@ -148,14 +148,15 @@
     #define SPINDLE_TIMSK_REGISTER TIMSK4
     #define SPINDLE_ICR_REGISTER   ICR4
     #define SPINDLE_OCIE_BIT       OCIE4A
+    #define SPINDLE_OCRA_BIT       OCR4A
 
-    #define SPINDLE_TCCRA_INIT_MASK 0
-    #define SPINDLE_TCCRB_INIT_MASK ((1 << WGM42) | (1 << WGM43))
+    #define SPINDLE_TCCRA_INIT_MASK (1 << COM4B0)
+    #define SPINDLE_TCCRB_INIT_MASK (1 << WGM42)
     
     // Define spindle output pins.
-    #define SPINDLE_CONTROL_DDR     DDRA
-    #define SPINDLE_CONTROL_PORT    PORTA
-    #define SPINDLE_CONTROL_BIT     3  // MEGA2560 Digital Pin 25
+    #define SPINDLE_CONTROL_DDR     DDRH      
+    #define SPINDLE_CONTROL_PORT    PORTH
+    #define SPINDLE_CONTROL_BIT     4  // MEGA2560 Digital Pin 7 with TIMER4 vect A
 
     // Define spindle enable and spindle direction output pins.
     #define SPINDLE_ENABLE_DDR      DDRH

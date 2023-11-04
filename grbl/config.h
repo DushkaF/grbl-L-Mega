@@ -650,7 +650,7 @@
 
 
 #define SPINDLE_STEPS_PER_REVOLUTION  400           // for stepper with 1.8 grad step
-#define SPINDLE_MICROSTEP_DIVIDER     20
+#define SPINDLE_MICROSTEP_DIVIDER     10
 
 #define SPINDLE_ROTATION_ACCELERATION 3000 // For soft start/stop spindel. In RPM/s // TODO in settings
 

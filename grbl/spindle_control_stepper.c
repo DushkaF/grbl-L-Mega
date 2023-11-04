@@ -24,56 +24,89 @@
 static float freq_gradient; // Precalulated value to speed up rpm to PWM conversions.
 
 // Set period on CTC timer mode
-uint32_t set_period(uint32_t _timer_period)
+// uint32_t set_period(uint32_t _timer_period)
+// {
+//   uint32_t _timer_cycles = F_CPU / 1000000 * _timer_period; // Calculation of the number of timer cycles per period
+//   uint8_t _timer_prescaler = 0x00;
+//   uint16_t _timer_divider = 0x00;
+
+//   if (_timer_cycles < 65536UL)
+//   { // Сhoose optimal divider for the timer
+//     _timer_prescaler = 0x01;
+//     _timer_divider = 1UL;
+//   }
+//   else if (_timer_cycles < 65536UL * 8)
+//   {
+//     _timer_prescaler = 0x02;
+//     _timer_divider = 8UL;
+//   }
+//   else if (_timer_cycles < 65536UL * 64)
+//   {
+//     _timer_prescaler = 0x03;
+//     _timer_divider = 64UL;
+//   }
+//   else if (_timer_cycles < 65536UL * 256)
+//   {
+//     _timer_prescaler = 0x04;
+//     _timer_divider = 256UL;
+//   }
+//   else
+//   {
+//     _timer_prescaler = 0x05;
+//     _timer_divider = 1024UL;
+//   }
+
+//   uint16_t _timer_top = (_timer_cycles < 65536UL * 1024 ? (_timer_cycles / _timer_divider) : 65536UL);
+
+//   //  SPINDLE_TCCRA_REGISTER = (TCCR4A & 0xFC);
+//   SPINDLE_TCCRB_REGISTER = SPINDLE_TCCRB_INIT_MASK;
+//   SPINDLE_TCCRB_REGISTER |= _timer_prescaler; // CTC mode + set prescaler
+//   SPINDLE_ICR_REGISTER = _timer_top - 1;      // Set timer top
+
+//   return (1000000UL / ((F_CPU / _timer_divider) / _timer_top)); // Return real timer period
+// }
+
+// uint32_t set_frequency(uint32_t _timer_frequency)
+// {
+//   return 1000000UL / (set_period(1000000UL / _timer_frequency));
+// }
+
+void set_frequency(volatile uint32_t _timer_frequency)
 {
-  uint32_t _timer_cycles = F_CPU / 1000000 * _timer_period; // Calculation of the number of timer cycles per period
-  uint8_t _timer_prescaler = 0x00;
-  uint16_t _timer_divider = 0x00;
-
-  if (_timer_cycles < 65536UL)
-  { // Сhoose optimal divider for the timer
-    _timer_prescaler = 0x01;
-    _timer_divider = 1UL;
-  }
-  else if (_timer_cycles < 65536UL * 8)
-  {
-    _timer_prescaler = 0x02;
-    _timer_divider = 8UL;
-  }
-  else if (_timer_cycles < 65536UL * 64)
-  {
-    _timer_prescaler = 0x03;
-    _timer_divider = 64UL;
-  }
-  else if (_timer_cycles < 65536UL * 256)
-  {
-    _timer_prescaler = 0x04;
-    _timer_divider = 256UL;
-  }
-  else
-  {
-    _timer_prescaler = 0x05;
-    _timer_divider = 1024UL;
-  }
-
-  uint16_t _timer_top = (_timer_cycles < 65536UL * 1024 ? (_timer_cycles / _timer_divider) : 65536UL);
-
-  //  SPINDLE_TCCRA_REGISTER = (TCCR4A & 0xFC);
-  SPINDLE_TCCRB_REGISTER = SPINDLE_TCCRB_INIT_MASK;
-  SPINDLE_TCCRB_REGISTER |= _timer_prescaler; // CTC mode + set prescaler
-  SPINDLE_ICR_REGISTER = _timer_top - 1;      // Set timer top
-
-  return (1000000UL / ((F_CPU / _timer_divider) / _timer_top)); // Return real timer period
-}
-
-uint32_t set_frequency(uint32_t _timer_frequency)
-{
-  return 1000000UL / (set_period(1000000UL / _timer_frequency));
+  // printString("Freq set ");
+  // print_uint32_base10(_timer_frequency);
+  // printString(" case ");
+  // report_util_line_feed();
+  uint8_t flag = 0; // debug flag
+  cli();      // disable interupts
+  SPINDLE_TCCRA_REGISTER = 0; // registers for timer
+  SPINDLE_TCCRB_REGISTER = 0;
+  TCNT4 = 0;
+  SPINDLE_TCCRA_REGISTER |= (1 << COM4B0); // wavegeneratir on pin 7
+  SPINDLE_TCCRB_REGISTER |= (1 << WGM42); // CTC with top in OCRn reg
+  if (_timer_frequency > 122 && _timer_frequency < 1000001){
+      SPINDLE_OCRA_BIT = (8000000 / _timer_frequency) - 1; // #TIMER COUNTS
+      SPINDLE_TCCRB_REGISTER |= (1 << CS40);
+      // flag = 1;
+  } else if (_timer_frequency <= 122 && _timer_frequency > 15) {
+      SPINDLE_OCRA_BIT = (1000000 / _timer_frequency) - 1;
+      SPINDLE_TCCRB_REGISTER |= (1 << CS41);
+      // flag = 2;
+  } else if (_timer_frequency <= 15 && _timer_frequency > 4){
+      SPINDLE_OCRA_BIT = (125000 / _timer_frequency) - 1;
+      SPINDLE_TCCRB_REGISTER |= (1 << CS40) + (1 << CS41);
+      // flag = 3;
+  } 
+  
+  sei(); // enable interupts
+  // print_uint8_base10(flag);
+  // print_uint32_base10(_timer_frequency);
+  // report_util_line_feed();
 }
 
 ISR(SPINDLE_TIMER)
 {
-  SPINDLE_CONTROL_PORT ^= (1 << SPINDLE_CONTROL_BIT);
+  // SPINDLE_CONTROL_PORT ^= (1 << SPINDLE_CONTROL_BIT);
 }
 
 void spindle_init()
@@ -85,8 +118,10 @@ void spindle_init()
   SPINDLE_ENABLE_DDR |= (1 << SPINDLE_ENABLE_BIT);       // Configure as output pin.
   SPINDLE_DIRECTION_DDR |= (1 << SPINDLE_DIRECTION_BIT); // Configure as output pin.
 
-  freq_gradient = (1.0 / 60.0) * (360.0 * SPINDLE_MICROSTEP_DIVIDER / 1.8);
-  // spindle_stop(SPINDLE_ENABLE_HOLD);
+  freq_gradient = (1.0 / 60.0) * (360.0 * (float) SPINDLE_MICROSTEP_DIVIDER / 1.8);
+
+  // RESEARCH CODE
+  DDRH |= (1 << 4); // Configure timer-linked pin PH4 as output pin.
 }
 
 uint8_t spindle_get_state()   // TODO write for hold 
@@ -132,9 +167,9 @@ void spindle_stop(uint8_t end_state)
   SPINDLE_TIMSK_REGISTER &= ~(1 << SPINDLE_OCIE_BIT);  // turn off SPINDLE_TIMER
   SPINDLE_CONTROL_PORT &= ~(1 << SPINDLE_CONTROL_BIT); // set step pin low
   sei();
-  printString("Spindle state is ");
-  print_uint8_base2_ndigit(bit_isfalse(SPINDLE_ENABLE_PORT, (1 << SPINDLE_ENABLE_BIT)), 8);
-  report_util_line_feed();
+  // printString("Spindle state is ");
+  // print_uint8_base2_ndigit(bit_isfalse(SPINDLE_ENABLE_PORT, (1 << SPINDLE_ENABLE_BIT)), 8);
+  // report_util_line_feed();
 }
 
 // Sets spindle speed PWM output and enable pin, if configured. Called by spindle_set_state()
@@ -155,6 +190,8 @@ void spindle_set_speed(uint32_t freq_value, uint8_t state)
   }
 
   set_frequency(2 * freq_value);
+  // print_uint32_base10(2 * freq_value);
+  // report_util_line_feed();
 
 #ifdef SPINDLE_ENABLE_OFF_WITH_ZERO_SPEED
   if (freq_value == SPINDLE_RPM_OFF_VALUE)
