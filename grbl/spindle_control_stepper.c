@@ -77,27 +77,30 @@ void set_frequency(volatile uint32_t _timer_frequency)
   // print_uint32_base10(_timer_frequency);
   // printString(" case ");
   // report_util_line_feed();
-  uint8_t flag = 0; // debug flag
+  // uint8_t flag = 0; // debug flag
+  uint16_t OCRA_BIT;
+  uint8_t TCCRB_BIT;
+  if (_timer_frequency > 122 && _timer_frequency < 1000001){
+      OCRA_BIT = (8000000 / _timer_frequency) - 1; // #TIMER COUNTS
+      TCCRB_BIT |= (1 << CS40);
+      // flag = 1;
+  } else if (_timer_frequency <= 122 && _timer_frequency > 15) {
+      OCRA_BIT = (1000000 / _timer_frequency) - 1;
+      TCCRB_BIT |= (1 << CS41);
+      // flag = 2;
+  } else if (_timer_frequency <= 15 && _timer_frequency > 4){
+      OCRA_BIT = (125000 / _timer_frequency) - 1;
+      TCCRB_BIT |= (1 << CS40) + (1 << CS41);
+      // flag = 3;
+  } 
   cli();      // disable interupts
   SPINDLE_TCCRA_REGISTER = 0; // registers for timer
   SPINDLE_TCCRB_REGISTER = 0;
   TCNT4 = 0;
   SPINDLE_TCCRA_REGISTER |= (1 << COM4B0); // wavegeneratir on pin 7
   SPINDLE_TCCRB_REGISTER |= (1 << WGM42); // CTC with top in OCRn reg
-  if (_timer_frequency > 122 && _timer_frequency < 1000001){
-      SPINDLE_OCRA_BIT = (8000000 / _timer_frequency) - 1; // #TIMER COUNTS
-      SPINDLE_TCCRB_REGISTER |= (1 << CS40);
-      // flag = 1;
-  } else if (_timer_frequency <= 122 && _timer_frequency > 15) {
-      SPINDLE_OCRA_BIT = (1000000 / _timer_frequency) - 1;
-      SPINDLE_TCCRB_REGISTER |= (1 << CS41);
-      // flag = 2;
-  } else if (_timer_frequency <= 15 && _timer_frequency > 4){
-      SPINDLE_OCRA_BIT = (125000 / _timer_frequency) - 1;
-      SPINDLE_TCCRB_REGISTER |= (1 << CS40) + (1 << CS41);
-      // flag = 3;
-  } 
-  
+  SPINDLE_OCRA_BIT = OCRA_BIT;
+  SPINDLE_TCCRB_REGISTER |= TCCRB_BIT;
   sei(); // enable interupts
   // print_uint8_base10(flag);
   // print_uint32_base10(_timer_frequency);
@@ -119,9 +122,6 @@ void spindle_init()
   SPINDLE_DIRECTION_DDR |= (1 << SPINDLE_DIRECTION_BIT); // Configure as output pin.
 
   freq_gradient = (1.0 / 60.0) * (360.0 * (float) SPINDLE_MICROSTEP_DIVIDER / 1.8);
-
-  // RESEARCH CODE
-  DDRH |= (1 << 4); // Configure timer-linked pin PH4 as output pin.
 }
 
 uint8_t spindle_get_state()   // TODO write for hold 
@@ -164,7 +164,11 @@ void spindle_stop(uint8_t end_state)
       SPINDLE_ENABLE_PORT |= (1 << SPINDLE_ENABLE_BIT); // Set pin to high
     #endif
   }
-  SPINDLE_TIMSK_REGISTER &= ~(1 << SPINDLE_OCIE_BIT);  // turn off SPINDLE_TIMER
+  // SPINDLE_TIMSK_REGISTER &= ~(1 << SPINDLE_OCIE_BIT);  // turn off SPINDLE_TIMER
+  cli();
+  SPINDLE_TCCRA_REGISTER = 0; // registers for timer
+  SPINDLE_TCCRB_REGISTER = 0;
+  TCNT4 = 0;
   SPINDLE_CONTROL_PORT &= ~(1 << SPINDLE_CONTROL_BIT); // set step pin low
   sei();
   // printString("Spindle state is ");
@@ -189,9 +193,6 @@ void spindle_set_speed(uint32_t freq_value, uint8_t state)
     SPINDLE_DIRECTION_PORT |= (1 << SPINDLE_DIRECTION_BIT);
   }
 
-  set_frequency(2 * freq_value);
-  // print_uint32_base10(2 * freq_value);
-  // report_util_line_feed();
 
 #ifdef SPINDLE_ENABLE_OFF_WITH_ZERO_SPEED
   if (freq_value == SPINDLE_RPM_OFF_VALUE)
@@ -215,12 +216,21 @@ void spindle_set_speed(uint32_t freq_value, uint8_t state)
   }
   if (freq_value == SPINDLE_RPM_OFF_VALUE)
   {
-    SPINDLE_TIMSK_REGISTER &= ~(1 << SPINDLE_OCIE_BIT);  // turn off SPINDLE_TIMER
+    // SPINDLE_TIMSK_REGISTER &= ~(1 << SPINDLE_OCIE_BIT);  // turn off SPINDLE_TIMER
+    cli();
+    SPINDLE_TCCRA_REGISTER = 0; // registers for timer
+    SPINDLE_TCCRB_REGISTER = 0;
+    TCNT4 = 0;
+    sei();
     SPINDLE_CONTROL_PORT &= ~(1 << SPINDLE_CONTROL_BIT); // set step pin low
   }
   else
   {
-    SPINDLE_TIMSK_REGISTER |= (1 << SPINDLE_OCIE_BIT); // Ensure PWM output is enabled.
+    set_frequency(2 * freq_value);
+    // print_uint32_base10(2 * freq_value);
+    // report_util_line_feed();
+    
+    // SPINDLE_TIMSK_REGISTER |= (1 << SPINDLE_OCIE_BIT); // Ensure PWM output is enabled.
 #ifdef INVERT_SPINDLE_ENABLE_PIN
     SPINDLE_ENABLE_PORT &= ~(1 << SPINDLE_ENABLE_BIT);
 #else
@@ -228,7 +238,6 @@ void spindle_set_speed(uint32_t freq_value, uint8_t state)
 #endif
   }
 #endif
-  sei();
 }
 
 #ifdef ENABLE_PIECEWISE_LINEAR_SPINDLE
@@ -335,5 +344,7 @@ void spindle_sync(uint8_t state, float rpm)
     return;
   }
   protocol_buffer_synchronize(); // Empty planner buffer to ensure spindle is set when programmed.
+  // printString("Buffer sinchronized");
+  // report_util_line_feed();
   spindle_set_state(state, rpm);
 }

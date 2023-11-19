@@ -318,7 +318,7 @@ void settings_init() {
 // Returns step pin mask according to Grbl internal axis indexing.
 uint8_t get_step_pin_mask(uint8_t axis_idx)
 {
-  #ifdef DEFAULTS_RAMPS_BOARD
+  #if defined(DEFAULTS_RAMPS_BOARD) || defined(DEFAULTS_GENERIC_WITH_SPINDLE_ON_AXIS)
     if ( axis_idx == X_AXIS ) { return((1<<STEP_BIT(X_AXIS))); }
     if ( axis_idx == Y_AXIS ) { return((1<<STEP_BIT(Y_AXIS))); }
     return((1<<STEP_BIT(Z_AXIS)));
@@ -333,7 +333,7 @@ uint8_t get_step_pin_mask(uint8_t axis_idx)
 // Returns direction pin mask according to Grbl internal axis indexing.
 uint8_t get_direction_pin_mask(uint8_t axis_idx)
 {
-  #ifdef DEFAULTS_RAMPS_BOARD
+  #if defined(DEFAULTS_RAMPS_BOARD) || defined(DEFAULTS_GENERIC_WITH_SPINDLE_ON_AXIS) 
     if ( axis_idx == X_AXIS ) { return((1<<DIRECTION_BIT(X_AXIS))); }
     if ( axis_idx == Y_AXIS ) { return((1<<DIRECTION_BIT(Y_AXIS))); }
     return((1<<DIRECTION_BIT(Z_AXIS)));
@@ -361,7 +361,7 @@ uint8_t get_direction_pin_mask(uint8_t axis_idx)
      if ( axis_idx == Y_AXIS ) { return((1<<MAX_LIMIT_BIT(Y_AXIS))); }
      return((1<<MAX_LIMIT_BIT(Z_AXIS)));
   }
-#else
+#else // for DEFAULTS_GENERIC_WITH_SPINDLE_ON_AXIS
   uint8_t get_limit_pin_mask(uint8_t axis_idx)
   {
     if ( axis_idx == X_AXIS ) { return((1<<X_LIMIT_BIT)); }

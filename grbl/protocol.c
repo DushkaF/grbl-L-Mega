@@ -163,7 +163,10 @@ void protocol_main_loop()
     protocol_auto_cycle_start();
 
     protocol_execute_realtime();  // Runtime command check point.
-    if (sys.abort) { return; } // Bail to main() program loop to reset system.
+    if (sys.abort) { 
+      printString("Abort");
+      return; 
+    } // Bail to main() program loop to reset system.
     
     #ifdef SLEEP_ENABLE
     // Check for sleep conditions and execute auto-park, if timeout duration elapses.

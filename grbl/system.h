@@ -119,6 +119,7 @@
 #define CONTROL_PIN_INDEX_FEED_HOLD     bit(2)
 #define CONTROL_PIN_INDEX_CYCLE_START   bit(3)
 #define CONTROL_PIN_INDEX_SPINDLE_SYNC	bit(4)
+#define CONTROL_PIN_INDEX_SPINDLE_ALARM	bit(5)
 
 // Define spindle stop override control states.
 #define SPINDLE_STOP_OVR_DISABLED       0  // Must be zero.
@@ -136,7 +137,7 @@ typedef struct {
   uint8_t soft_limit;          // Tracks soft limit errors for the state machine. (boolean)
   uint8_t step_control;        // Governs the step segment generator depending on system state.
   uint8_t probe_succeeded;     // Tracks if last probing cycle was successful.
-  #ifdef DEFAULTS_RAMPS_BOARD
+  #if defined(DEFAULTS_RAMPS_BOARD) || defined(DEFAULTS_GENERIC_WITH_SPINDLE_ON_AXIS) 
     uint8_t homing_axis_lock[N_AXIS];    // Locks axes when limits engage. Used as an axis motion mask in the stepper ISR.
   #else
     uint8_t homing_axis_lock;    // Locks axes when limits engage. Used as an axis motion mask in the stepper ISR.

@@ -81,7 +81,7 @@ int main(void)
   {
     // Check RESET button
     uint8_t pin = system_control_get_state();
-    if(bit_istrue(pin,CONTROL_PIN_INDEX_RESET)){
+    if(bit_istrue(pin,CONTROL_PIN_INDEX_RESET) || bit_istrue(pin,CONTROL_PIN_INDEX_SPINDLE_ALARM)){
       sys.state = STATE_ALARM;
     }
 
@@ -121,6 +121,7 @@ int main(void)
 
     // Start Grbl main loop. Processes program inputs and executes them.
     protocol_main_loop();
+    spindle_stop(SPINDLE_DISABLE);
   }
   return 0; /* Never reached */
 }

@@ -228,7 +228,7 @@ uint8_t limits_get_state(uint8_t selected_pins) //
   #endif
 #endif // DEFAULTS_RAMPS_BOARD
 
-#ifdef DEFAULTS_RAMPS_BOARD
+#if defined(DEFAULTS_RAMPS_BOARD) || defined(DEFAULTS_GENERIC_WITH_SPINDLE_ON_AXIS) 
   static uint8_t axislock_active(uint8_t *axislock)
   {
     uint8_t res = 0;
@@ -285,7 +285,7 @@ void limits_go_home(uint8_t cycle_mask)
   // Set search mode with approach at seek rate to quickly engage the specified cycle_mask limit switches.
   bool approach = true;
   float homing_rate = settings.homing_seek_rate;
-  #ifdef DEFAULTS_RAMPS_BOARD
+  #if defined(DEFAULTS_RAMPS_BOARD) || defined(DEFAULTS_GENERIC_WITH_SPINDLE_ON_AXIS)
     uint8_t limit_state, n_active_axis;
     uint8_t axislock[N_AXIS];
     do {
@@ -380,7 +380,6 @@ void limits_go_home(uint8_t cycle_mask)
             break;
           }
         }
-
       } while (axislock_active(axislock));
       st_reset(); // Immediately force kill steppers and reset step segment buffer.
       delay_ms(settings.homing_debounce_delay); // Delay to allow transient dynamics to dissipate.

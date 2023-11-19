@@ -935,8 +935,12 @@ uint8_t gc_execute_line(char *line)
     if (gc_state.modal.spindle != SPINDLE_DISABLE || gc_state.modal.spindle != SPINDLE_ENABLE_HOLD) { 
       if (bit_isfalse(gc_parser_flags,GC_PARSER_LASER_ISMOTION)) {
         if (bit_istrue(gc_parser_flags,GC_PARSER_LASER_DISABLE)) {
-           spindle_sync(gc_state.modal.spindle, 0.0);
-        } else { spindle_sync(gc_state.modal.spindle, gc_block.values.s); }
+          //  spindle_sync(gc_state.modal.spindle, 0.0);           // not for lathe
+        } else { 
+          // printString("In Set spindle");
+          // report_util_line_feed();
+          spindle_sync(gc_state.modal.spindle, gc_block.values.s); 
+        }
       }
     }
     gc_state.spindle_speed = gc_block.values.s; // Update spindle speed state.
@@ -956,6 +960,8 @@ uint8_t gc_execute_line(char *line)
     // Update spindle control and apply spindle speed when enabling it in this block.
     // NOTE: All spindle state changes are synced, even in laser mode. Also, pl_data,
     // rather than gc_state, is used to manage laser state for non-laser motions.
+    // printString("In Spindle control");
+    // report_util_line_feed();
     spindle_sync(gc_block.modal.spindle, pl_data->spindle_speed);
     gc_state.modal.spindle = gc_block.modal.spindle;
   }

@@ -53,8 +53,12 @@
 // NOTE: OEMs can avoid the need to maintain/update the defaults.h and cpu_map.h files and use only
 // one configuration file by placing their specific defaults and pin map at the bottom of this file.
 // If doing so, simply comment out these two defines and see instructions below.
-#define DEFAULTS_GENERIC
-#define CPU_MAP_2560_INITIAL
+// #define DEFAULTS_GENERIC
+// #define CPU_MAP_2560_INITIAL
+
+// To use with generatic board with spindle on axis, comment out the above defines and uncomment the next two defines
+#define DEFAULTS_GENERIC_WITH_SPINDLE_ON_AXIS
+#define CPU_MAP_2560_INITIAL_WITH_SPINDLE_ON_AXIS
 
 // To use with RAMPS 1.4/1.6 Boards, comment out the above defines and uncomment the next two defines
 // #define DEFAULTS_RAMPS_BOARD
@@ -649,10 +653,14 @@
 #define RPM_LINE_B4  1.151360e+03
 
 
-#define SPINDLE_STEPS_PER_REVOLUTION  400           // for stepper with 1.8 grad step
-#define SPINDLE_MICROSTEP_DIVIDER     10
+#define SPINDLE_STEPS_PER_REVOLUTION  200           // for stepper with 1.8 grad step
+#define SPINDLE_MICROSTEP_DIVIDER     5
 
 #define SPINDLE_ROTATION_ACCELERATION 3000 // For soft start/stop spindel. In RPM/s // TODO in settings
+
+// If you use spindle with thread cutting, please, use alarm for save your tools and machine 
+#define SPINDLE_ALARM_PIN // Use alarm output on driver. Break program run if spindle in alarm.
+#define SPINDLE_ALARM_INVERT // inverting alarm pin
 
 /* ---------------------------------------------------------------------------------------
    OEM Single File Configuration Option

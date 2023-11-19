@@ -52,8 +52,9 @@ uint8_t system_control_get_state()
     if (bit_isfalse(pin,(1<<CONTROL_FEED_HOLD_BIT))) { control_state |= CONTROL_PIN_INDEX_FEED_HOLD; }
     if (bit_isfalse(pin,(1<<CONTROL_CYCLE_START_BIT))) { control_state |= CONTROL_PIN_INDEX_CYCLE_START; }
 #ifndef DEFAULTS_RAMPS_BOARD        //On RAMPS board SYNC pulses are on the INT1 interrupt pin (D3)
-    if (bit_isfalse(pin,(1<<CONTROL_SPINDLE_SYNC_BIT))) { control_state |= CONTROL_PIN_INDEX_SPINDLE_SYNC; }
+    if (bit_isfalse(pin,(1<<CONTROL_SPINDLE_SYNC_BIT))) { control_state |= CONTROL_PIN_INDEX_SPINDLE_SYNC; } // TORESEARCH
 #endif
+    if (bit_isfalse(pin,(1<<CONTROL_SPINDLE_ALARM_PIN))) { control_state |= CONTROL_PIN_INDEX_SPINDLE_ALARM; }
   }
   return(control_state);
 }
@@ -78,7 +79,7 @@ ISR(INT1_vect){
 ISR(CONTROL_INT_vect){
   uint8_t pin = system_control_get_state();
 	if (pin) {
-    if (bit_istrue(pin,CONTROL_PIN_INDEX_RESET)) {
+    if (bit_istrue(pin,CONTROL_PIN_INDEX_RESET) || (bit_istrue(pin,CONTROL_PIN_INDEX_SPINDLE_ALARM))) {
       mc_reset();
     } else if (bit_istrue(pin,CONTROL_PIN_INDEX_CYCLE_START)) {
       bit_true(sys_rt_exec_state, EXEC_CYCLE_START);
@@ -174,6 +175,10 @@ uint8_t system_execute_line(char *line)
               report_feedback_message(MESSAGE_RESET_PRESS);
               return(STATUS_SYSTEM_GC_LOCK);
             }
+            if (system_control_get_state() & CONTROL_PIN_INDEX_SPINDLE_ALARM) { // Block if srindle in alarm.
+              report_feedback_message(MESSAGE_SPINDLE_ALARM);
+              return(STATUS_SYSTEM_GC_LOCK);
+            }
             report_feedback_message(MESSAGE_ALARM_UNLOCK);
             sys.state = STATE_IDLE;
             spindle_stop(SPINDLE_ENABLE_HOLD);    // Hold spindle
@@ -195,8 +200,12 @@ uint8_t system_execute_line(char *line)
           if (system_check_safety_door_ajar()) { return(STATUS_CHECK_DOOR); } // Block if safety door is ajar.
           if (system_control_get_state() & CONTROL_PIN_INDEX_RESET) { // Block if reset is pressed.
             report_feedback_message(MESSAGE_RESET_PRESS);
-              return(STATUS_SYSTEM_GC_LOCK);
-            }
+            return(STATUS_SYSTEM_GC_LOCK);
+          }
+          if (system_control_get_state() & CONTROL_PIN_INDEX_SPINDLE_ALARM) { // Block if srindle in alarm.
+            report_feedback_message(MESSAGE_SPINDLE_ALARM);
+            return(STATUS_SYSTEM_GC_LOCK);
+          }
           sys.state = STATE_HOMING; // Set system state variable
           if (line[2] == 0) {
             mc_homing_cycle(HOMING_CYCLE_ALL);

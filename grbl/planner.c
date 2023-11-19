@@ -260,7 +260,7 @@ float plan_compute_profile_nominal_speed(plan_block_t *block)
 	float nominal_speed = block->programmed_rate;
 	if (block->condition & PL_COND_FLAG_RAPID_MOTION) { nominal_speed *= (0.01*sys.r_override); }
 	else
-	if (block->condition & PL_COND_FLAG_FEED_PER_REV) { // SPINDLE_SYNC
+	if (block->condition & PL_COND_FLAG_FEED_PER_REV) { // SPINDLE_SYNC //TORESEARCH
 		if bit_istrue(threading_exec_flags, EXEC_PLANNER_SYNC_PULSE) {									                 // there was a synchronization pulse so calculate the feed rate to be at the right position at the next spindle pulse	
 		  system_clear_threading_exec_flag(EXEC_PLANNER_SYNC_PULSE);									                   // clear the bit to avoid processing again.
 
@@ -388,7 +388,7 @@ uint8_t plan_buffer_line(float *target, plan_line_data_t *pl_data)
     unit_vec[idx] = delta_mm; // Store unit vector numerator
 
     // Set direction bits. Bit enabled always means direction is negative.
-    #ifdef DEFAULTS_RAMPS_BOARD
+    #if defined(DEFAULTS_RAMPS_BOARD) || defined(DEFAULTS_GENERIC_WITH_SPINDLE_ON_AXIS) 
       if (delta_mm < 0.0 ) { block->direction_bits[idx] |= get_direction_pin_mask(idx); }
     #else
       if (delta_mm < 0.0 ) { block->direction_bits |= get_direction_pin_mask(idx); }
