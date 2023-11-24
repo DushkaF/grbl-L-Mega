@@ -287,7 +287,8 @@ void report_ngc_parameters()
   report_util_axis_values(gc_state.coord_offset);
   report_util_feedback_line_feed();
   printPgmString(PSTR("[TLO:")); // Print tool length offset value
-  printFloat_CoordValue(gc_state.tool_length_offset);
+  report_util_axis_values(gc_state.tool_length_offset);
+  // printFloat_CoordValue(gc_state.tool_length_offset); //CHANGED
   report_util_feedback_line_feed();
   report_probe_parameters(); // Print probe parameters. Not persistent in memory.
 }
@@ -519,7 +520,7 @@ void report_realtime_status()
     for (idx=0; idx< N_AXIS; idx++) {
       // Apply work coordinate offsets and tool length offset to current position.
       wco[idx] = gc_state.coord_system[idx]+gc_state.coord_offset[idx];
-      if (idx == TOOL_LENGTH_OFFSET_AXIS) { wco[idx] += gc_state.tool_length_offset; }
+      wco[idx] += gc_state.tool_length_offset[idx];
       if (bit_isfalse(settings.status_report_mask,BITFLAG_RT_STATUS_POSITION_TYPE)) {
         print_position[idx] -= wco[idx];
       }

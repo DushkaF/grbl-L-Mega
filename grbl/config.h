@@ -183,7 +183,7 @@
 // Upon a successful probe cycle, this option provides immediately feedback of the probe coordinates
 // through an automatically generated message. If disabled, users can still access the last probe
 // coordinates through Grbl '$#' print parameters.
-//#define MESSAGE_PROBE_COORDINATES // disabled by default. Comment to disable when LATHE is defined.
+#define MESSAGE_PROBE_COORDINATES // disabled by default. Comment to disable when LATHE is defined.
 
 // This option causes the feed hold input to act as a safety door switch. A safety door, when triggered,
 // immediately forces a feed hold and then safely de-energizes the machine. Resuming is blocked until
@@ -350,7 +350,7 @@
 // Sets which axis the tool length offset is applied. Assumes the spindle is always parallel with
 // the selected axis with the tool oriented toward the negative direction. In other words, a positive
 // tool length offset value is subtracted from the current location.
-#define TOOL_LENGTH_OFFSET_AXIS Z_AXIS // Default z-axis. Valid values are X_AXIS, Y_AXIS, or Z_AXIS. //*TORESEARCH
+#define TOOL_LENGTH_OFFSET_AXIS X_AXIS // Default z-axis. Valid values are X_AXIS, Y_AXIS, or Z_AXIS. //*TORESEARCH
 
 // Used by variable spindle output only. This forces the PWM output to a minimum duty cycle when enabled.
 // The PWM pin will still read 0V when the spindle is disabled. Most users will not need this option, but

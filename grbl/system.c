@@ -52,7 +52,7 @@ uint8_t system_control_get_state()
     if (bit_isfalse(pin,(1<<CONTROL_FEED_HOLD_BIT))) { control_state |= CONTROL_PIN_INDEX_FEED_HOLD; }
     if (bit_isfalse(pin,(1<<CONTROL_CYCLE_START_BIT))) { control_state |= CONTROL_PIN_INDEX_CYCLE_START; }
 #ifndef DEFAULTS_RAMPS_BOARD        //On RAMPS board SYNC pulses are on the INT1 interrupt pin (D3)
-    if (bit_isfalse(pin,(1<<CONTROL_SPINDLE_SYNC_BIT))) { control_state |= CONTROL_PIN_INDEX_SPINDLE_SYNC; } // TORESEARCH
+    // if (bit_isfalse(pin,(1<<CONTROL_SPINDLE_SYNC_BIT))) { control_state |= CONTROL_PIN_INDEX_SPINDLE_SYNC; } // TORESEARCH
 #endif
     if (bit_isfalse(pin,(1<<CONTROL_SPINDLE_ALARM_PIN))) { control_state |= CONTROL_PIN_INDEX_SPINDLE_ALARM; }
   }
@@ -61,6 +61,7 @@ uint8_t system_control_get_state()
 
 // * TORESEARCH
 //On the RAMPS Board, Index pulses are service by INT0 Pin D2
+#ifdef DEFAULTS_RAMPS_BOARD
 ISR(INT0_vect){
 	if (settings.sync_pulses_per_revolution>=1)  							// If G33 is configured for index pulses
 		debounce_index_pulse();												          // Debounce the index pulse.
@@ -71,6 +72,7 @@ ISR(INT1_vect){
     debounce_sync_pulse();                                  // Debounce the synchronization pulse
 	}
 }
+#endif
 
 // Pin change interrupt for pin-out commands, i.e. cycle start, feed hold, and reset. Sets
 // only the realtime command execute variable to have the main program execute these when

@@ -499,11 +499,13 @@ uint8_t gc_execute_line(char *line)
   //   NOTE: Although not explicitly stated so, G43.1 should be applied to only one valid
   //   axis that is configured (in config.h). There should be an error if the configured axis
   //   is absent or if any of the other axis words are present.
-  if (axis_command == AXIS_COMMAND_TOOL_LENGTH_OFFSET ) { // Indicates called in block.
-    if (gc_block.modal.tool_length == TOOL_LENGTH_OFFSET_ENABLE_DYNAMIC) {
-      if (axis_words ^ (1<<TOOL_LENGTH_OFFSET_AXIS)) { FAIL(STATUS_GCODE_G43_DYNAMIC_AXIS_ERROR); }
-    }
-  }
+
+  // Support all axis TOOL COMPENSATION added 
+  // if (axis_command == AXIS_COMMAND_TOOL_LENGTH_OFFSET ) { // Indicates called in block.            
+  //   if (gc_block.modal.tool_length == TOOL_LENGTH_OFFSET_ENABLE_DYNAMIC) {
+  //     if (axis_words ^ (1<<TOOL_LENGTH_OFFSET_AXIS)) { FAIL(STATUS_GCODE_G43_DYNAMIC_AXIS_ERROR); }
+  //   }
+  // }
 
   // [15. Coordinate system selection ]: *N/A. Error, if cutter radius comp is active.
   // TODO: An EEPROM read of the coordinate data may require a buffer sync when the cycle
@@ -559,7 +561,7 @@ uint8_t gc_execute_line(char *line)
             // L20: Update coordinate system axis at current position (with modifiers) with programmed value
             // WPos = MPos - WCS - G92 - TLO  ->  WCS = MPos - G92 - TLO - WPos
             gc_block.values.ijk[idx] = gc_state.position[idx]-gc_state.coord_offset[idx]-gc_block.values.xyz[idx];
-            if (idx == TOOL_LENGTH_OFFSET_AXIS) { gc_block.values.ijk[idx] -= gc_state.tool_length_offset; }
+            gc_block.values.ijk[idx] -= gc_state.tool_length_offset[idx];
           } else {
             // L2: Update coordinate system axis to programmed value.
             gc_block.values.ijk[idx] = gc_block.values.xyz[idx];
@@ -577,7 +579,7 @@ uint8_t gc_execute_line(char *line)
         if (bit_istrue(axis_words,bit(idx)) ) {
           // WPos = MPos - WCS - G92 - TLO  ->  G92 = MPos - WCS - TLO - WPos
           gc_block.values.xyz[idx] = gc_state.position[idx]-block_coord_system[idx]-gc_block.values.xyz[idx];
-          if (idx == TOOL_LENGTH_OFFSET_AXIS) { gc_block.values.xyz[idx] -= gc_state.tool_length_offset; }
+          gc_block.values.xyz[idx] -= gc_state.tool_length_offset[idx];
         } else {
           gc_block.values.xyz[idx] = gc_state.coord_offset[idx];
         }
@@ -602,7 +604,7 @@ uint8_t gc_execute_line(char *line)
                 // Apply coordinate offsets based on distance mode.
                 if (gc_block.modal.distance == DISTANCE_MODE_ABSOLUTE) {
                   gc_block.values.xyz[idx] += block_coord_system[idx] + gc_state.coord_offset[idx];
-                  if (idx == TOOL_LENGTH_OFFSET_AXIS) { gc_block.values.xyz[idx] += gc_state.tool_length_offset; }
+                  gc_block.values.xyz[idx] += gc_state.tool_length_offset[idx];
                 } else {  // Incremental mode
                   gc_block.values.xyz[idx] += gc_state.position[idx];
                 }
@@ -1003,12 +1005,18 @@ uint8_t gc_execute_line(char *line)
   if (axis_command == AXIS_COMMAND_TOOL_LENGTH_OFFSET ) { // Indicates a change.
     gc_state.modal.tool_length = gc_block.modal.tool_length;
     if (gc_state.modal.tool_length == TOOL_LENGTH_OFFSET_CANCEL) { // G49
-      gc_block.values.xyz[TOOL_LENGTH_OFFSET_AXIS] = 0.0;
+      for (idx=0; idx<N_AXIS; idx++) { // Axes indices are consistent, so loop may be used.
+        gc_block.values.xyz[idx] = 0.0;
+      }
     } // else G43.1
-    if ( gc_state.tool_length_offset != gc_block.values.xyz[TOOL_LENGTH_OFFSET_AXIS] ) {
-      gc_state.tool_length_offset = gc_block.values.xyz[TOOL_LENGTH_OFFSET_AXIS];
-      system_flag_wco_change();
+    bool flag = false;
+    for (idx=0; idx<N_AXIS; idx++) { // Axes indices are consistent, so loop may be used.
+       if ( gc_state.tool_length_offset[idx] != gc_block.values.xyz[idx] ) {
+        gc_state.tool_length_offset[idx] = gc_block.values.xyz[idx];
+        flag = true;
+      }
     }
+    if (flag){system_flag_wco_change();}
   }
 
   // [15. Coordinate system selection ]:
@@ -1088,7 +1096,7 @@ uint8_t gc_execute_line(char *line)
 			  }
 			  protocol_exec_rt_system();											                                      // process real time commands if a sync/index pulse was counted, but not processed yet
         threading_sync_pulse_count=0;                                                         // This is the start C position for spindle synchronization, even if threading is not started yet. The next line will add the threading distance to this target
-        threading_step_pulse_count=0;                                                         // This is the start Z position 
+        threading_step_pulse_count=0;                                                         // This is the start Z position       //TORESEARCH
 				pl_data->feed_rate=gc_block.values.ijk[Z_AXIS] * spindle_rpm;		    // Set the start feed rate 
         mc_line(gc_block.values.xyz, pl_data);	                                              // Execute the motion 
 				} else if (gc_state.modal.motion == MOTION_MODE_SEEK) {
