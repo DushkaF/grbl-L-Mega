@@ -129,6 +129,13 @@
 #define SPINDLE_STOP_OVR_RESTORE_CYCLE  bit(3)
 
 
+// NOTE: Max line number is defined by the g-code standard to be 99999. It seems to be an
+// arbitrary value, and some GUIs may require more. So we increased it based on a max safe
+// value when converting a float (7.2 digit precision)s to an integer.
+#define MAX_LINE_NUMBER 10000000
+#define MAX_TOOL_NUMBER 10 // Limited by max unsigned 8-bit value
+
+
 // Define global system variables
 typedef struct {
   uint8_t state;               // Tracks the current system state of Grbl.
@@ -164,6 +171,7 @@ extern volatile uint8_t sys_rt_exec_state;		// Global realtime executor bitflag 
 extern volatile uint8_t sys_rt_exec_alarm;		// Global realtime executor bitflag variable for setting various alarms.
 extern volatile uint8_t sys_rt_exec_motion_override; // Global realtime executor bitflag variable for motion-based overrides.
 extern volatile uint8_t sys_rt_exec_accessory_override; // Global realtime executor bitflag variable for spindle/coolant overrides.
+extern volatile uint8_t sys_rt_exec_stepper_power_state;  // Global real time executor bit flag variable for stepper state
 
 
 #ifdef DEBUG

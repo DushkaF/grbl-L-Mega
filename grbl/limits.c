@@ -116,7 +116,7 @@ void limits_disable()
 
 // Returns limit state as a bit-wise uint8 variable. Each bit indicates an axis limit, where 
 // triggered is 1 and not triggered is 0. Invert mask is applied. Axes are defined by their
-// number in bit position, i.e. Z_AXIS is (1<<2) or bit 2, and Y_AXIS is (1<<1) or bit 1.
+// number in bit position, i.e. Z_AXIS is (1<<2) or bit 2, and C_AXIS is (1<<1) or bit 1.
 // For G33 implementation, the y-axis limit pin is used as index pulse. To avoid unwanted limit pin hits, the state of the y-axis has to be masked at some points in the code.
 // This is done by passing the pins that have to be omitted as parameter.
 uint8_t limits_get_state(uint8_t selected_pins) //
@@ -181,7 +181,7 @@ uint8_t limits_get_state(uint8_t selected_pins) //
   {
     if (sys.state != STATE_ALARM) {
     	if (!(sys_rt_exec_alarm)) {
-    	  if (limits_get_state(LIMIT_PIN_MASK_ALL_EXCEPT_Y_AXIS)) { // handle all axis except the y-axis
+    	  if (limits_get_state(LIMIT_PIN_MASK_ALL_EXCEPT_C_AXIS)) { // handle all axis except the y-axis
     	    mc_reset(); // Initiate system kill.
           system_set_exec_alarm(EXEC_ALARM_HARD_LIMIT); // Indicate hard limit critical event
          }
@@ -209,9 +209,9 @@ uint8_t limits_get_state(uint8_t selected_pins) //
   // Upon limit pin change, Software debounce by enabling watchdog timer that will handle the pin change after a short delay (watchdog time out). 
   ISR(LIMIT_INT_vect)
 	{
-		if (limits_get_state(LIMIT_PIN_MASK_Y_AXIS)) // limit pins are debounced using a user settable delay
+		if (limits_get_state(LIMIT_PIN_MASK_C_AXIS)) // limit pins are debounced using a user settable delay
 			debounce_index_pulse(); //index pin is debounced different
-    if (limits_get_state(LIMIT_PIN_MASK_ALL_EXCEPT_Y_AXIS)) {   // Check for other interrupts
+    if (limits_get_state(LIMIT_PIN_MASK_ALL_EXCEPT_C_AXIS)) {   // Check for other interrupts
 		   if (!(WDTCSR & (1<<WDIE)))  // If the watchdog is not enabled
 		   {
 			    WDTCSR |= (1<<WDIE);   // Enable watchdog

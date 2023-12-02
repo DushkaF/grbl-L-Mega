@@ -230,7 +230,7 @@
   #define PROBE_MASK      (1<<PROBE_BIT)
 
 
-  #define SPINDLE_COMBINE_AXIS Y_AXIS   // Set the axis combined with the spindle
+  #define SPINDLE_COMBINE_AXIS C_AXIS   // Set the axis combined with the spindle
 
   // Advanced Configuration Below You should not need to touch these variables
 
@@ -385,7 +385,7 @@
   #define PROBE_MASK      (1<<PROBE_BIT)
 
 
-  #define SPINDLE_COMBINE_AXIS Y_AXIS   // Set the axis combined with the spindle
+  #define SPINDLE_COMBINE_AXIS C_AXIS   // Set the axis combined with the spindle
 
 
     // Advanced Configuration Below You should not need to touch these variables
@@ -439,7 +439,7 @@
     #define SPINDLE_TCCRB_INIT_MASK ((1 << WGM42) | (1 << WGM43))
     
     // Define spindle output pins.
-    #define SPINDLE_CONTROL_DDR STEP_DDR(1)  // ...(1) - it is number of Y_AXIS === SPINDLE_COMBINE_AXIS
+    #define SPINDLE_CONTROL_DDR STEP_DDR(1)  // ...(1) - it is number of C_AXIS === SPINDLE_COMBINE_AXIS
     #define SPINDLE_CONTROL_PORT STEP_PORT(1)
     #define SPINDLE_CONTROL_BIT STEP_BIT(1)
 

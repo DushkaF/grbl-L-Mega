@@ -28,9 +28,10 @@ int32_t sys_probe_position[N_AXIS];                // Last probe position in mac
 volatile uint8_t sys_probe_state;                  // Probing state value.  Used to coordinate the probing cycle with stepper ISR.
 volatile uint8_t sys_rt_exec_state;                // Global real time executor bit flag variable for state management. See EXEC bit masks.
 volatile uint8_t sys_rt_exec_alarm;                // Global real time executor bit flag variable for setting various alarms.
-volatile uint8_t sys_rt_exec_motion_override;     // Global real time executor bit flag variable for motion-based overrides.
+volatile uint8_t sys_rt_exec_motion_override;      // Global real time executor bit flag variable for motion-based overrides.
 volatile uint8_t sys_rt_exec_accessory_override;   // Global real time executor bit flag variable for spindle/coolant overrides.
 volatile uint8_t sys_rt_exec_spindel_state; // REVIEW : Global real time executor bit flag variable for spindle speed change.
+volatile uint8_t sys_rt_exec_stepper_power_state;  // Global real time executor bit flag variable for stepper state
 
 #ifdef DEBUG
 volatile uint8_t sys_rt_exec_debug;

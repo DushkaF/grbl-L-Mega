@@ -42,10 +42,12 @@
 #define MODAL_GROUP_G13 10 // [G61] Control mode
 #define MODAL_GROUP_G14 11 // [G96,G97] Spindle Control Mode
 
-#define MODAL_GROUP_M4 11  // [M0,M1,M2,M30] Stopping
-#define MODAL_GROUP_M7 12 // [M3,M4,M5] Spindle turning
-#define MODAL_GROUP_M8 13 // [M7,M8,M9] Coolant control
-#define MODAL_GROUP_M9 14 // [M56] Override control
+#define MODAL_GROUP_M4 11 // [M0,M1,M2,M30] Stopping
+#define MODAL_GROUP_M6 12 // [M6] Tool changing
+#define MODAL_GROUP_M7 13 // [M3,M4,M5] Spindle turning
+#define MODAL_GROUP_M8 14 // [M7,M8,M9] Coolant control
+#define MODAL_GROUP_M9 15 // [M56] Override control
+#define MODAL_GROUP_M10 16 // [M17/M18] Stepper power control
 
 // Define command actions for within execution-type modal groups (motion, stopping, non-modal). Used
 // internally by the parser to know which command to execute.
@@ -122,9 +124,14 @@
 #define COOLANT_FLOOD_ENABLE  PL_COND_FLAG_COOLANT_FLOOD // M8 (NOTE: Uses planner condition bit flag)
 #define COOLANT_MIST_ENABLE   PL_COND_FLAG_COOLANT_MIST  // M7 (NOTE: Uses planner condition bit flag)
 
+// Modal Group M10: Stepper power control
+#define STEPPER_DISABLE 1 // M17 (NOTE: Uses planner condition bit flag)
+#define STEPPER_ENABLE  0 // M18 (Default: Must be zero)
+
 // Modal Group G8: Tool length offset
 #define TOOL_LENGTH_OFFSET_CANCEL 0 // G49 (Default: Must be zero)
 #define TOOL_LENGTH_OFFSET_ENABLE_DYNAMIC 1 // G43.1
+#define TOOL_LENGTH_OFFSET_ENABLE_LIST 2 // G43
 
 // Modal Group M9: Override control
 #ifdef DEACTIVATE_PARKING_UPON_INIT
@@ -155,7 +162,7 @@
 #define WORD_S  8
 #define WORD_T  9
 #define WORD_X  10
-#define WORD_Y  11
+#define WORD_C  11
 #define WORD_Z  12
 
 // Define g-code parser position updating flags
@@ -198,10 +205,11 @@ typedef struct {
   uint8_t tool_length;       // {G43.1,G49}
   uint8_t coord_select;      // {G54,G55,G56,G57,G58,G59}
   // uint8_t control;        // {G61} NOTE: Don't track. Only default supported.
-  // uint9_t spindle_ mode;  // {G96,G97}
+  // uint8_t spindle_ mode;  // {G96,G97}
   uint8_t program_flow;      // {M0,M1,M2,M30}
   uint8_t coolant;           // {M7,M8,M9}
   uint8_t spindle;           // {M3,M4,M5}
+  uint8_t stepper_power_state;    // {M17,M18}
   uint8_t override;          // {M56}
 } gc_modal_t;
 
@@ -219,13 +227,12 @@ typedef struct {
   float xyz[3];    // X,Y,Z Translational axes
 } gc_values_t;
 
-
 typedef struct {
   gc_modal_t modal;
 
   float spindle_speed;          // RPM
   float feed_rate;              // Millimeters/min
-  uint8_t tool;                 // Tracks tool number. NOT USED.  //TODO tool number
+  uint8_t tool;                 // Tracks tool number.
   int32_t line_number;          // Last line number sent
 
   float position[N_AXIS];       // Where the interpreter considers the tool to be at this point in the code

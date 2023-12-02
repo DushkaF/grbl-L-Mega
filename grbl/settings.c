@@ -47,16 +47,16 @@ const __flash settings_t defaults = {\
              (DEFAULT_INVERT_LIMIT_PINS << BIT_INVERT_LIMIT_PINS) | \
              (DEFAULT_INVERT_PROBE_PIN << BIT_INVERT_PROBE_PIN),
     .steps_per_mm[X_AXIS] = DEFAULT_X_STEPS_PER_MM,
-    .steps_per_mm[Y_AXIS] = DEFAULT_Y_STEPS_PER_MM,
+    .steps_per_mm[C_AXIS] = DEFAULT_Y_STEPS_PER_MM,
     .steps_per_mm[Z_AXIS] = DEFAULT_Z_STEPS_PER_MM,
     .max_rate[X_AXIS] = DEFAULT_X_MAX_RATE,
-    .max_rate[Y_AXIS] = DEFAULT_Y_MAX_RATE,
+    .max_rate[C_AXIS] = DEFAULT_Y_MAX_RATE,
     .max_rate[Z_AXIS] = DEFAULT_Z_MAX_RATE,
     .acceleration[X_AXIS] = DEFAULT_X_ACCELERATION,
-    .acceleration[Y_AXIS] = DEFAULT_Y_ACCELERATION,
+    .acceleration[C_AXIS] = DEFAULT_Y_ACCELERATION,
     .acceleration[Z_AXIS] = DEFAULT_Z_ACCELERATION,
     .max_travel[X_AXIS] = (-DEFAULT_X_MAX_TRAVEL),
-    .max_travel[Y_AXIS] = (-DEFAULT_Y_MAX_TRAVEL),
+    .max_travel[C_AXIS] = (-DEFAULT_Y_MAX_TRAVEL),
     .max_travel[Z_AXIS] = (-DEFAULT_Z_MAX_TRAVEL),
 	  .sync_pulses_per_revolution = DEFAULT_SYNC_PULSES_PER_REVOLUTION,	
 	  .debounce_tics = DEFAULT_DEBOUNCE_TICS
@@ -93,6 +93,16 @@ void settings_write_coord_data(uint8_t coord_select, float *coord_data)
   memcpy_to_eeprom_with_checksum(addr,(char*)coord_data, sizeof(float)*N_AXIS);
 }
 
+// Method to store tool data parameters into EEPROM
+void settings_write_tool_data(uint8_t tool_select, float *tool_data)
+{
+  #ifdef FORCE_BUFFER_SYNC_DURING_EEPROM_WRITE
+    protocol_buffer_synchronize();
+  #endif
+  uint32_t addr = tool_select*(sizeof(float)*N_AXIS+1) + EEPROM_ADDR_TOOL_LIST;
+  memcpy_to_eeprom_with_checksum(addr,(char*)tool_data, sizeof(float)*N_AXIS);
+}
+
 
 // Method to store Grbl global settings struct and version number into EEPROM
 // NOTE: This function can only be called in IDLE state.
@@ -113,8 +123,11 @@ void settings_restore(uint8_t restore_flag) {
   if (restore_flag & SETTINGS_RESTORE_PARAMETERS) {
     uint8_t idx;
     float coord_data[N_AXIS];
+    float tool_data[N_AXIS];
     memset(&coord_data, 0, sizeof(coord_data));
+    memset(&tool_data, 0, sizeof(tool_data));
     for (idx=0; idx <= SETTING_INDEX_NCOORD; idx++) { settings_write_coord_data(idx, coord_data); }
+    for (idx=0; idx <= MAX_TOOL_NUMBER; idx++) { settings_write_tool_data(idx, tool_data); }
   }
 
   if (restore_flag & SETTINGS_RESTORE_STARTUP_LINES) {
@@ -170,6 +183,19 @@ uint8_t settings_read_coord_data(uint8_t coord_select, float *coord_data)
     // Reset with default zero vector
     clear_vector_float(coord_data);
     settings_write_coord_data(coord_select,coord_data);
+    return(false);
+  }
+  return(true);
+}
+
+// Read selected tool offset data from EEPROM. Updates pointed lool_data value.
+uint8_t settings_read_tool_data(uint8_t tool_select, float *tool_data)
+{
+  uint32_t addr = tool_select*(sizeof(float)*N_AXIS+1) + EEPROM_ADDR_TOOL_LIST;
+  if (!(memcpy_from_eeprom_with_checksum((char*)tool_data, addr, sizeof(float)*N_AXIS))) {
+    // Reset with default zero vector
+    clear_vector_float(tool_data);
+    settings_write_tool_data(tool_select,tool_data);
     return(false);
   }
   return(true);
@@ -320,11 +346,11 @@ uint8_t get_step_pin_mask(uint8_t axis_idx)
 {
   #if defined(DEFAULTS_RAMPS_BOARD) || defined(DEFAULTS_GENERIC_WITH_SPINDLE_ON_AXIS)
     if ( axis_idx == X_AXIS ) { return((1<<STEP_BIT(X_AXIS))); }
-    if ( axis_idx == Y_AXIS ) { return((1<<STEP_BIT(Y_AXIS))); }
+    if ( axis_idx == C_AXIS ) { return((1<<STEP_BIT(C_AXIS))); }
     return((1<<STEP_BIT(Z_AXIS)));
   #else
     if ( axis_idx == X_AXIS ) { return((1<<X_STEP_BIT)); }
-    if ( axis_idx == Y_AXIS ) { return((1<<Y_STEP_BIT)); }
+    if ( axis_idx == C_AXIS ) { return((1<<Y_STEP_BIT)); }
     return((1<<Z_STEP_BIT));
   #endif // DEFAULTS_RAMPS_BOARD
 }
@@ -335,11 +361,11 @@ uint8_t get_direction_pin_mask(uint8_t axis_idx)
 {
   #if defined(DEFAULTS_RAMPS_BOARD) || defined(DEFAULTS_GENERIC_WITH_SPINDLE_ON_AXIS) 
     if ( axis_idx == X_AXIS ) { return((1<<DIRECTION_BIT(X_AXIS))); }
-    if ( axis_idx == Y_AXIS ) { return((1<<DIRECTION_BIT(Y_AXIS))); }
+    if ( axis_idx == C_AXIS ) { return((1<<DIRECTION_BIT(C_AXIS))); }
     return((1<<DIRECTION_BIT(Z_AXIS)));
   #else
     if ( axis_idx == X_AXIS ) { return((1<<X_DIRECTION_BIT)); }
-    if ( axis_idx == Y_AXIS ) { return((1<<Y_DIRECTION_BIT)); }
+    if ( axis_idx == C_AXIS ) { return((1<<Y_DIRECTION_BIT)); }
     return((1<<Z_DIRECTION_BIT));
   #endif // DEFAULTS_RAMPS_BOARD
 }
@@ -351,21 +377,21 @@ uint8_t get_direction_pin_mask(uint8_t axis_idx)
   uint8_t get_min_limit_pin_mask(uint8_t axis_idx)
   {
     if ( axis_idx == X_AXIS ) { return((1<<MIN_LIMIT_BIT(X_AXIS))); }
-    if ( axis_idx == Y_AXIS ) { return((1<<MIN_LIMIT_BIT(Y_AXIS))); }
+    if ( axis_idx == C_AXIS ) { return((1<<MIN_LIMIT_BIT(C_AXIS))); }
     return((1<<MIN_LIMIT_BIT(Z_AXIS)));
   }
 
    uint8_t get_max_limit_pin_mask(uint8_t axis_idx)
    {
      if ( axis_idx == X_AXIS ) { return((1<<MAX_LIMIT_BIT(X_AXIS))); }
-     if ( axis_idx == Y_AXIS ) { return((1<<MAX_LIMIT_BIT(Y_AXIS))); }
+     if ( axis_idx == C_AXIS ) { return((1<<MAX_LIMIT_BIT(C_AXIS))); }
      return((1<<MAX_LIMIT_BIT(Z_AXIS)));
   }
 #else // for DEFAULTS_GENERIC_WITH_SPINDLE_ON_AXIS
   uint8_t get_limit_pin_mask(uint8_t axis_idx)
   {
     if ( axis_idx == X_AXIS ) { return((1<<X_LIMIT_BIT)); }
-    if ( axis_idx == Y_AXIS ) { return((1<<Y_LIMIT_BIT)); }
+    if ( axis_idx == C_AXIS ) { return((1<<Y_LIMIT_BIT)); }
     return((1<<Z_LIMIT_BIT));
   }
 #endif //DEFAULTS_RAMPS_BOARD

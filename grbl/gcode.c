@@ -21,11 +21,6 @@
 
 #include "grbl.h"
 
-// NOTE: Max line number is defined by the g-code standard to be 99999. It seems to be an
-// arbitrary value, and some GUIs may require more. So we increased it based on a max safe
-// value when converting a float (7.2 digit precision)s to an integer.
-#define MAX_LINE_NUMBER 10000000
-#define MAX_TOOL_NUMBER 255 // Limited by max unsigned 8-bit value
 
 #define AXIS_COMMAND_NONE 0
 #define AXIS_COMMAND_NON_MODAL 1
@@ -77,6 +72,7 @@ uint8_t gc_execute_line(char *line)
   uint8_t axis_command = AXIS_COMMAND_NONE;
   uint8_t axis_0, axis_1, axis_linear;
   uint8_t coord_select = 0; // Tracks G10 P coordinate selection for execution
+  uint8_t tool_select = 0; // Tracks G10 L10 P tool selection for execution
 
   // Initialize bitflag tracking variables for axis indices compatible operations.
   uint8_t axis_words = 0; // XYZ tracking
@@ -217,7 +213,16 @@ uint8_t gc_execute_line(char *line)
             axis_command = AXIS_COMMAND_TOOL_LENGTH_OFFSET;
             if (int_value == 49) { // G49
               gc_block.modal.tool_length = TOOL_LENGTH_OFFSET_CANCEL;
-            } else if (mantissa == 10) { // G43.1
+            } 
+            else if (mantissa == 0) { // G43
+              if (gc_state.tool > 0){}
+              else
+              {
+                FAIL(STATUS_GCODE_G43_DYNAMIC_AXIS_ERROR);
+              }
+              gc_block.modal.tool_length = TOOL_LENGTH_OFFSET_ENABLE_LIST;
+            }
+            else if (mantissa == 10) { // G43.1
               gc_block.modal.tool_length = TOOL_LENGTH_OFFSET_ENABLE_DYNAMIC;
             } else { FAIL(STATUS_GCODE_UNSUPPORTED_COMMAND); } // [Unsupported G43.x command]
             mantissa = 0; // Set to zero to indicate valid non-integer G command.
@@ -270,12 +275,22 @@ uint8_t gc_execute_line(char *line)
               case 5: gc_block.modal.spindle = SPINDLE_ENABLE_HOLD; break;    // not disable, hold. For disable use another 
             }
             break;            
+          case 6:
+            word_bit = MODAL_GROUP_M6; 
+            break;
           case 7: case 8: case 9:
             word_bit = MODAL_GROUP_M8; 
             switch(int_value) {      
               case 7: gc_block.modal.coolant |= COOLANT_MIST_ENABLE; break;
               case 8: gc_block.modal.coolant |= COOLANT_FLOOD_ENABLE; break;
               case 9: gc_block.modal.coolant = COOLANT_DISABLE; break; // M9 disables both M7 and M8.
+            }
+            break;
+          case 17: case 18:
+            word_bit = MODAL_GROUP_M10; 
+            switch(int_value) {
+              case 17: gc_block.modal.stepper_power_state |= STEPPER_DISABLE; break;
+              case 18: gc_block.modal.stepper_power_state = STEPPER_ENABLE; break;
             }
             break;
           #ifdef ENABLE_PARKING_OVERRIDE_CONTROL
@@ -302,12 +317,12 @@ uint8_t gc_execute_line(char *line)
         switch(letter){
           // case 'A': // Not supported
           // case 'B': // Not supported
-          // case 'C': // Not supported
+          case 'C': word_bit = WORD_C; gc_block.values.xyz[C_AXIS] = value; axis_words |= (1<<C_AXIS); break;
           // case 'D': // Not supported
           case 'F': word_bit = WORD_F; gc_block.values.f = value; break;
           // case 'H': // Not supported  //TODO make support in G43 parse
           case 'I': word_bit = WORD_I; gc_block.values.ijk[X_AXIS] = value; ijk_words |= (1<<X_AXIS); break;
-          case 'J': word_bit = WORD_J; gc_block.values.ijk[Y_AXIS] = value; ijk_words |= (1<<Y_AXIS); break;
+          case 'J': word_bit = WORD_J; gc_block.values.ijk[C_AXIS] = value; ijk_words |= (1<<C_AXIS); break;
           case 'K': word_bit = WORD_K; gc_block.values.ijk[Z_AXIS] = value; ijk_words |= (1<<Z_AXIS); break;  //K is also used in G33
           case 'L': word_bit = WORD_L; gc_block.values.l = int_value; break;
           case 'N': word_bit = WORD_N; gc_block.values.n = trunc(value); break;
@@ -321,7 +336,7 @@ uint8_t gc_execute_line(char *line)
 						gc_block.values.t = int_value;
 						break;
           case 'X': word_bit = WORD_X; gc_block.values.xyz[X_AXIS] = value; axis_words |= (1<<X_AXIS); break;
-          case 'Y': word_bit = WORD_Y; gc_block.values.xyz[Y_AXIS] = value; axis_words |= (1<<Y_AXIS); break;
+          // case 'Y': word_bit = WORD_Y; gc_block.values.xyz[Y_AXIS] = value; axis_words |= (1<<Y_AXIS); break;
           case 'Z': word_bit = WORD_Z; gc_block.values.xyz[Z_AXIS] = value; axis_words |= (1<<Z_AXIS); break;
           default: FAIL(STATUS_GCODE_UNSUPPORTED_COMMAND);
         }
@@ -440,6 +455,8 @@ uint8_t gc_execute_line(char *line)
 
   // [5. Select tool ]: NOT SUPPORTED. Only tracks value. T is negative (done.) Not an integer. Greater than max tool value.
   // bit_false(value_words,bit(WORD_T)); // NOTE: Single-meaning value word. Set at end of error-checking.
+  if (bit_isfalse(value_words,bit(WORD_T))) { gc_block.values.t = gc_state.tool; }
+
 
   // [6. Change tool ]: N/A
   // [7. Spindle control ]: N/A
@@ -464,16 +481,16 @@ uint8_t gc_execute_line(char *line)
   switch (gc_block.modal.plane_select) {
     case PLANE_SELECT_XY:
       axis_0 = X_AXIS;
-      axis_1 = Y_AXIS;
+      axis_1 = C_AXIS;
       axis_linear = Z_AXIS;
       break;
     case PLANE_SELECT_ZX:
       axis_0 = Z_AXIS;
       axis_1 = X_AXIS;
-      axis_linear = Y_AXIS;
+      axis_linear = C_AXIS;
       break;
     default: // case PLANE_SELECT_YZ:
-      axis_0 = Y_AXIS;
+      axis_0 = C_AXIS;
       axis_1 = Z_AXIS;
       axis_linear = X_AXIS;
   }
@@ -494,18 +511,18 @@ uint8_t gc_execute_line(char *line)
   //   NOTE: Since cutter radius compensation is never enabled, these G40 errors don't apply. Grbl supports G40
   //   only for the purpose to not error when G40 is sent with a g-code program header to setup the default modes.
 
-  // [14. Cutter length compensation ]: G43 NOT SUPPORTED, but G43.1 and G49 are.
+  // [14. Cutter length compensation ]: G43 try to supported, but G43.1 and G49 are.
   // [G43.1 Errors]: Motion command in same line.
   //   NOTE: Although not explicitly stated so, G43.1 should be applied to only one valid
   //   axis that is configured (in config.h). There should be an error if the configured axis
   //   is absent or if any of the other axis words are present.
 
-  // Support all axis TOOL COMPENSATION added 
-  // if (axis_command == AXIS_COMMAND_TOOL_LENGTH_OFFSET ) { // Indicates called in block.            
-  //   if (gc_block.modal.tool_length == TOOL_LENGTH_OFFSET_ENABLE_DYNAMIC) {
-  //     if (axis_words ^ (1<<TOOL_LENGTH_OFFSET_AXIS)) { FAIL(STATUS_GCODE_G43_DYNAMIC_AXIS_ERROR); }
-  //   }
-  // }
+  // Support all axis TOOL COMPENSATION added, but for rotary C axis it should be disabled!
+  if (axis_command == AXIS_COMMAND_TOOL_LENGTH_OFFSET ) { // Indicates called in block.            
+    if (gc_block.modal.tool_length == TOOL_LENGTH_OFFSET_ENABLE_DYNAMIC) {
+      if (axis_words & (1<<C_AXIS)) { FAIL(STATUS_GCODE_G43_DYNAMIC_AXIS_ERROR); }
+    }
+  }
 
   // [15. Coordinate system selection ]: *N/A. Error, if cutter radius comp is active.
   // TODO: An EEPROM read of the coordinate data may require a buffer sync when the cycle
@@ -532,42 +549,86 @@ uint8_t gc_execute_line(char *line)
   // all the current coordinate system and G92 offsets.
   switch (gc_block.non_modal_command) {
     case NON_MODAL_SET_COORDINATE_DATA:
-      // [G10 Errors]: L missing and is not 2 or 20. P word missing. (Negative P value done.)
+      // [G10 Errors]: L missing and is not 2 10, or 20. P word missing. (Negative P value done.)
       // [G10 L2 Errors]: R word NOT SUPPORTED. P value not 0 to nCoordSys(max 9). Axis words missing.
+      // [G10 L10 Errors]: P must be 0 to MAX_TOOL_NUMBER(max 255). Axis words missing.
       // [G10 L20 Errors]: P must be 0 to nCoordSys(max 9). Axis words missing.
       if (!axis_words) { FAIL(STATUS_GCODE_NO_AXIS_WORDS) }; // [No axis words]
       if (bit_isfalse(value_words,((1<<WORD_P)|(1<<WORD_L)))) { FAIL(STATUS_GCODE_VALUE_WORD_MISSING); } // [P/L word missing]
-      coord_select = trunc(gc_block.values.p); // Convert p value to int.
-      if (coord_select > N_COORDINATE_SYSTEM) { FAIL(STATUS_GCODE_UNSUPPORTED_COORD_SYS); } // [Greater than N sys]
-      if (gc_block.values.l != 20) {
-        if (gc_block.values.l == 2) {
-          if (bit_istrue(value_words,bit(WORD_R))) { FAIL(STATUS_GCODE_UNSUPPORTED_COMMAND); } // [G10 L2 R not supported]
-        } else { FAIL(STATUS_GCODE_UNSUPPORTED_COMMAND); } // [Unsupported L]
+      switch (gc_block.values.l)
+      {
+      case 10:
+        tool_select = trunc(gc_block.values.p); // Convert p value to int.
+        if (tool_select > MAX_TOOL_NUMBER) { FAIL(STATUS_GCODE_MAX_VALUE_EXCEEDED); } // [Greater than N sys]
+        if (bit_istrue(value_words,bit(WORD_R))) { FAIL(STATUS_GCODE_UNSUPPORTED_COMMAND); } // [G10 L10 R not supported]
+        // Determine tool number to change and try to load from EEPROM.
+        if (tool_select > 0) {} // Adjust P1-Pmax index to EEPROM tool data indexing.
+        else {
+          if(gc_state.tool > 0) {tool_select = gc_state.tool; }
+          else {FAIL(STATUS_EXPECTED_COMMAND_LETTER);}
+        } // Index P0 as the active tool number, if active T0 (it is G43.1) - send error
+        
+        // NOTE: Store parameter data in IJK values. By rule, they are not in use with this command.
+        if (!settings_read_tool_data(tool_select,gc_block.values.ijk)) { FAIL(STATUS_SETTING_READ_FAIL); } // [EEPROM read fail]
+
+        // report_util_axis_values(gc_state.position);        //TODELETE
+        // report_util_line_feed();
+        // report_util_axis_values(gc_state.coord_offset);
+        // report_util_line_feed();
+        // report_util_axis_values(gc_block.values.xyz);
+        // report_util_line_feed();
+        // report_util_axis_values(gc_state.coord_system);
+        // report_util_line_feed();
+
+        // Pre-calculate the coordinate data changes.
+        for (idx=0; idx<N_AXIS; idx++) { // Axes indices are consistent, so loop may be used.
+          // Update axes defined only in block. Always in machine coordinates. Can change non-active system.
+          if (bit_istrue(axis_words,bit(idx)) ) {
+            if (gc_block.values.l == 10) {
+              // L10: Update tool offset axis at current position (with modifiers) with programmed value
+              // WPos = MPos - WCS - G92 - TLO  ->  TLO = MPos - G92 - TLOWCS - WPos
+              gc_block.values.ijk[idx] = gc_state.position[idx] - gc_state.coord_offset[idx] - gc_block.values.xyz[idx] - gc_state.coord_system[idx];
+            }
+          } // Else, keep current stored value.
+        }
+        // printString("Result:");
+        // report_util_axis_values(gc_block.values.ijk);
+        // report_util_line_feed();
+        break;
+      case 20:
+      case 2:
+        coord_select = trunc(gc_block.values.p); // Convert p value to int.
+        if (coord_select > N_COORDINATE_SYSTEM) { FAIL(STATUS_GCODE_UNSUPPORTED_COORD_SYS); } // [Greater than N sys]
+        if (bit_istrue(value_words,bit(WORD_R))) { FAIL(STATUS_GCODE_UNSUPPORTED_COMMAND); } // [G10 L2 R not supported]
+        
+        // Determine coordinate system to change and try to load from EEPROM.
+        if (coord_select > 0) { coord_select--; } // Adjust P1-P6 index to EEPROM coordinate data indexing.
+        else { coord_select = gc_block.modal.coord_select; } // Index P0 as the active coordinate system
+        
+        // NOTE: Store parameter data in IJK values. By rule, they are not in use with this command.
+        if (!settings_read_coord_data(coord_select,gc_block.values.ijk)) { FAIL(STATUS_SETTING_READ_FAIL); } // [EEPROM read fail]
+
+        // Pre-calculate the coordinate data changes.
+        for (idx=0; idx<N_AXIS; idx++) { // Axes indices are consistent, so loop may be used.
+          // Update axes defined only in block. Always in machine coordinates. Can change non-active system.
+          if (bit_istrue(axis_words,bit(idx)) ) {
+            if (gc_block.values.l == 20) {
+              // L20: Update coordinate system axis at current position (with modifiers) with programmed value
+              // WPos = MPos - WCS - G92 - TLO  ->  WCS = MPos - G92 - TLO - WPos
+              gc_block.values.ijk[idx] = gc_state.position[idx]-gc_state.coord_offset[idx]-gc_block.values.xyz[idx];
+              gc_block.values.ijk[idx] -= gc_state.tool_length_offset[idx];
+            } else {
+              // L2: Update coordinate system axis to programmed value.
+              gc_block.values.ijk[idx] = gc_block.values.xyz[idx];
+            }
+          } // Else, keep current stored value.
+        }
+        break;
+      default:
+        FAIL(STATUS_GCODE_UNSUPPORTED_COMMAND);
+        break;
       }
       bit_false(value_words,(bit(WORD_L)|bit(WORD_P)));
-
-      // Determine coordinate system to change and try to load from EEPROM.
-      if (coord_select > 0) { coord_select--; } // Adjust P1-P6 index to EEPROM coordinate data indexing.
-      else { coord_select = gc_block.modal.coord_select; } // Index P0 as the active coordinate system
-      
-      // NOTE: Store parameter data in IJK values. By rule, they are not in use with this command.
-      if (!settings_read_coord_data(coord_select,gc_block.values.ijk)) { FAIL(STATUS_SETTING_READ_FAIL); } // [EEPROM read fail]
-
-      // Pre-calculate the coordinate data changes.
-      for (idx=0; idx<N_AXIS; idx++) { // Axes indices are consistent, so loop may be used.
-        // Update axes defined only in block. Always in machine coordinates. Can change non-active system.
-        if (bit_istrue(axis_words,bit(idx)) ) {
-          if (gc_block.values.l == 20) {
-            // L20: Update coordinate system axis at current position (with modifiers) with programmed value
-            // WPos = MPos - WCS - G92 - TLO  ->  WCS = MPos - G92 - TLO - WPos
-            gc_block.values.ijk[idx] = gc_state.position[idx]-gc_state.coord_offset[idx]-gc_block.values.xyz[idx];
-            gc_block.values.ijk[idx] -= gc_state.tool_length_offset[idx];
-          } else {
-            // L2: Update coordinate system axis to programmed value.
-            gc_block.values.ijk[idx] = gc_block.values.xyz[idx];
-          }
-        } // Else, keep current stored value.
-      }
       break;
     case NON_MODAL_SET_COORDINATE_OFFSET:
       // [G92 Errors]: No axis words.
@@ -632,7 +693,7 @@ uint8_t gc_execute_line(char *line)
               if (!(axis_words & (1<<idx))) { gc_block.values.ijk[idx] = gc_state.position[idx]; }
             }
           } else {
-            // Check spindle mode, if use stepper like a spindle. For your safe!
+            // Check spindle mode, if use stepper like a spindle. For your safety!
             if (!(axis_words & (1<<SPINDLE_COMBINE_AXIS)) && (sys_rt_exec_spindel_state != EXEC_SPINDLE_DISABLED && sys_rt_exec_spindel_state != EXEC_SPINDLE_HOLD)) 
             { gc_block.values.ijk[SPINDLE_COMBINE_AXIS] = gc_state.position[SPINDLE_COMBINE_AXIS]; } // For safe your soul
 
@@ -680,10 +741,10 @@ uint8_t gc_execute_line(char *line)
 		if (gc_block.values.f == 0.0) { FAIL(STATUS_GCODE_UNDEFINED_FEED_RATE); } // [Feed rate undefined]
       switch (gc_block.modal.motion) {
         case MOTION_MODE_SPINDLE_SYNC:
-			if  bit_isfalse(value_words,bit(WORD_K)) { FAIL(STATUS_GCODE_VALUE_WORD_MISSING); }					// [K value not given]
-			else if  bit_istrue(value_words,bit(WORD_F)) { FAIL(STATUS_GCODE_UNUSED_WORDS); }					// [F value given, but not needed], the check on other unused words will be done at the end
-            else if (gc_block.modal.units == UNITS_MODE_INCHES) {gc_block.values.ijk[Z_AXIS] *= MM_PER_INCH;}	//calculate for inches
-			//gc_block.values.k=gc_block.values.ijk[Z_AXIS];														//Set the feed per revolution in the (correct) k variable
+          if  bit_isfalse(value_words,bit(WORD_K)) { FAIL(STATUS_GCODE_VALUE_WORD_MISSING); }					// [K value not given]
+          else if  bit_istrue(value_words,bit(WORD_F)) { FAIL(STATUS_GCODE_UNUSED_WORDS); }					// [F value given, but not needed], the check on other unused words will be done at the end
+          else if (gc_block.modal.units == UNITS_MODE_INCHES) {gc_block.values.ijk[Z_AXIS] *= MM_PER_INCH;}	//calculate for inches
+			    //gc_block.values.k=gc_block.values.ijk[Z_AXIS];														//Set the feed per revolution in the (correct) k variable
             bit_false(value_words,bit(WORD_K));	//clear K word
         case MOTION_MODE_LINEAR:
           // [G1 Errors]: Feed rate undefined. Axis letter not configured or without real value.
@@ -853,7 +914,7 @@ uint8_t gc_execute_line(char *line)
   } else {
     bit_false(value_words,(bit(WORD_N)|bit(WORD_F)|bit(WORD_S)|bit(WORD_T))); // Remove single-meaning value words.
   }
-  if (axis_command) { bit_false(value_words,(bit(WORD_X)|bit(WORD_Y)|bit(WORD_Z))); } // Remove axis words.
+  if (axis_command) { bit_false(value_words,(bit(WORD_X)|bit(WORD_C)|bit(WORD_Z))); } // Remove axis words.
   if (value_words) { FAIL(STATUS_GCODE_UNUSED_WORDS); } // [Unused words]
 
   /* -------------------------------------------------------------------------------------
@@ -998,23 +1059,36 @@ uint8_t gc_execute_line(char *line)
   // [13. Cutter radius compensation ]: G41/42 NOT SUPPORTED
   // gc_state.modal.cutter_comp = gc_block.modal.cutter_comp; // NOTE: Not needed since always disabled.
 
-  // [14. Cutter length compensation ]: G43.1 and G49 supported. G43 NOT SUPPORTED.
+  // [14. Cutter length compensation ]: G43.1 and G49 supported. 
+  
+  // G43 try to support.
   // NOTE: If G43 were supported, its operation wouldn't be any different from G43.1 in terms
   // of execution. The error-checking step would simply load the offset value into the correct
   // axis of the block XYZ value array.
   if (axis_command == AXIS_COMMAND_TOOL_LENGTH_OFFSET ) { // Indicates a change.
     gc_state.modal.tool_length = gc_block.modal.tool_length;
-    if (gc_state.modal.tool_length == TOOL_LENGTH_OFFSET_CANCEL) { // G49
-      for (idx=0; idx<N_AXIS; idx++) { // Axes indices are consistent, so loop may be used.
-        gc_block.values.xyz[idx] = 0.0;
-      }
-    } // else G43.1
+
     bool flag = false;
-    for (idx=0; idx<N_AXIS; idx++) { // Axes indices are consistent, so loop may be used.
-       if ( gc_state.tool_length_offset[idx] != gc_block.values.xyz[idx] ) {
-        gc_state.tool_length_offset[idx] = gc_block.values.xyz[idx];
+    switch (gc_state.modal.tool_length)
+    {
+      case TOOL_LENGTH_OFFSET_CANCEL: // G49
+        for (idx=0; idx<N_AXIS; idx++) { // Axes indices are consistent, so loop may be used.
+          gc_block.values.xyz[idx] = 0.0;
+        }
+      case TOOL_LENGTH_OFFSET_ENABLE_DYNAMIC:
+        for (idx=0; idx<N_AXIS; idx++) { // Axes indices are consistent, so loop may be used.
+          if ( gc_state.tool_length_offset[idx] != gc_block.values.xyz[idx] ) {
+            gc_state.tool_length_offset[idx] = gc_block.values.xyz[idx];
+            flag = true;
+          }
+        }
+        break;
+      case TOOL_LENGTH_OFFSET_ENABLE_LIST:
+        if (!settings_read_tool_data(gc_state.tool, gc_state.tool_length_offset)) { FAIL(STATUS_SETTING_READ_FAIL); } // [EEPROM read fail]
         flag = true;
-      }
+        break;
+      default:
+        break;
     }
     if (flag){system_flag_wco_change();}
   }
@@ -1037,11 +1111,27 @@ uint8_t gc_execute_line(char *line)
   // [19. Go to predefined position, Set G10, or Set axis offsets ]:
   switch(gc_block.non_modal_command) {
     case NON_MODAL_SET_COORDINATE_DATA:
-      settings_write_coord_data(coord_select,gc_block.values.ijk);
-      // Update system coordinate system if currently active.
-      if (gc_state.modal.coord_select == coord_select) {
-        memcpy(gc_state.coord_system,gc_block.values.ijk,N_AXIS*sizeof(float));
-        system_flag_wco_change();
+      switch (gc_block.values.l)
+      {
+      case 10:
+        settings_write_tool_data(tool_select,gc_block.values.ijk);
+        // Update system coordinate system if currently active.
+        if (gc_state.tool == tool_select && gc_state.tool > 0) {
+          memcpy(gc_state.tool_length_offset,gc_block.values.ijk,N_AXIS*sizeof(float));
+          system_flag_wco_change();
+        }
+        break;
+      case 2:
+      case 20:
+        settings_write_coord_data(coord_select,gc_block.values.ijk);
+        // Update system coordinate system if currently active.
+        if (gc_state.modal.coord_select == coord_select) {
+          memcpy(gc_state.coord_system,gc_block.values.ijk,N_AXIS*sizeof(float));
+          system_flag_wco_change();
+        }
+        break;
+      default:
+        break;
       }
       break;
     case NON_MODAL_GO_HOME_0: case NON_MODAL_GO_HOME_1:
@@ -1173,6 +1263,23 @@ uint8_t gc_execute_line(char *line)
       report_feedback_message(MESSAGE_PROGRAM_END);
     }
     gc_state.modal.program_flow = PROGRAM_FLOW_RUNNING; // Reset program flow.
+  }
+
+  // [22. Stepper power control ]:
+  if (gc_state.modal.stepper_power_state != gc_block.modal.stepper_power_state) {
+    if (gc_block.modal.stepper_power_state == STEPPER_DISABLE)
+    {
+      sys_rt_exec_stepper_power_state = STEPPER_DISABLE;
+      protocol_buffer_synchronize();
+      st_go_idle();
+    } 
+    else if (gc_block.modal.stepper_power_state == STEPPER_ENABLE)
+    {
+      sys_rt_exec_stepper_power_state = STEPPER_ENABLE;
+      protocol_buffer_synchronize();
+      st_reset();
+    }
+    gc_state.modal.stepper_power_state = gc_block.modal.stepper_power_state;
   }
 
   // TODO: % to denote start of program.

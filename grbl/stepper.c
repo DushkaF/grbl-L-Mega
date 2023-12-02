@@ -313,7 +313,7 @@ void st_go_idle()
 
   // Set stepper driver idle state, disabled or enabled, depending on settings and circumstances.
   bool pin_state = false; // Keep enabled.
-  if (((settings.stepper_idle_lock_time != 0xff) || sys_rt_exec_alarm || sys.state == STATE_SLEEP) && sys.state != STATE_HOMING) {
+  if (((settings.stepper_idle_lock_time != 0xff) || sys_rt_exec_stepper_power_state || sys_rt_exec_alarm || sys.state == STATE_SLEEP) && sys.state != STATE_HOMING) {
     // Force stepper dwell to lock axes for a defined amount of time to ensure the axes come to a complete
     // stop and not drift from residual inertial forces at the end of the last movement.
     delay_ms(settings.stepper_idle_lock_time);
@@ -467,7 +467,7 @@ ISR(TIMER1_COMPA_vect)
         #else
           STEP_PORT(0) = (STEP_PORT(0) & ~(1 << STEP_BIT(0))) | st.step_outbits[0];
         #endif
-        #if SPINDLE_COMBINE_AXIS == Y_AXIS
+        #if SPINDLE_COMBINE_AXIS == C_AXIS
           STEP_PORT(1) = (STEP_PORT(1) & ~(1 << STEP_BIT(1))) | (((spindle_control_enable & SPINDLE_CONTROL_PORT)) | (st.step_outbits[1] & (~spindle_control_enable)));
         #else
           STEP_PORT(1) = (STEP_PORT(1) & ~(1 << STEP_BIT(1))) | st.step_outbits[1];
@@ -540,7 +540,7 @@ ISR(TIMER1_COMPA_vect)
       #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
         // With AMASS enabled, adjust Bresenham axis increment counters according to AMASS level.
         st.steps[X_AXIS] = st.exec_block->steps[X_AXIS] >> st.exec_segment->amass_level;
-        st.steps[Y_AXIS] = st.exec_block->steps[Y_AXIS] >> st.exec_segment->amass_level;
+        st.steps[C_AXIS] = st.exec_block->steps[C_AXIS] >> st.exec_segment->amass_level;
         st.steps[Z_AXIS] = st.exec_block->steps[Z_AXIS] >> st.exec_segment->amass_level;
       #endif
 
@@ -594,26 +594,26 @@ ISR(TIMER1_COMPA_vect)
   #endif // Ramps Board
 
   #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
-    st.counter_y += st.steps[Y_AXIS];
+    st.counter_y += st.steps[C_AXIS];
   #else
-    st.counter_y += st.exec_block->steps[Y_AXIS];
+    st.counter_y += st.exec_block->steps[C_AXIS];
   #endif
   #if defined(DEFAULTS_RAMPS_BOARD) || defined(DEFAULTS_GENERIC_WITH_SPINDLE_ON_AXIS) 
     if (st.counter_y > st.exec_block->step_event_count) {
-      st.step_outbits[Y_AXIS] |= (1<<STEP_BIT(Y_AXIS));
+      st.step_outbits[C_AXIS] |= (1<<STEP_BIT(C_AXIS));
       // uint8_t spindle_control_enable = (1 << SPINDLE_CONTROL_BIT);
       // print_uint8_base2_ndigit((STEP_PORT(1) & ~(1 << STEP_BIT(1))) | (((spindle_control_enable & SPINDLE_CONTROL_PORT)) | (st.step_outbits[1] & (~spindle_control_enable))), 8);
       // report_util_line_feed();
       st.counter_y -= st.exec_block->step_event_count;
-      if (st.exec_block->direction_bits[Y_AXIS] & (1<<DIRECTION_BIT(Y_AXIS))) { sys_position[Y_AXIS]--; }
-      else { sys_position[Y_AXIS]++; }
+      if (st.exec_block->direction_bits[C_AXIS] & (1<<DIRECTION_BIT(C_AXIS))) { sys_position[C_AXIS]--; }
+      else { sys_position[C_AXIS]++; }
     }
   #else
     if (st.counter_y > st.exec_block->step_event_count) {
       st.step_outbits |= (1<<Y_STEP_BIT);
       st.counter_y -= st.exec_block->step_event_count;
-      if (st.exec_block->direction_bits & (1<<Y_DIRECTION_BIT)) { sys_position[Y_AXIS]--; }
-      else { sys_position[Y_AXIS]++; }
+      if (st.exec_block->direction_bits & (1<<Y_DIRECTION_BIT)) { sys_position[C_AXIS]--; }
+      else { sys_position[C_AXIS]++; }
     }
   #endif // Ramps Board
   #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
@@ -686,7 +686,7 @@ ISR(TIMER0_OVF_vect)
       #else
         STEP_PORT(0) = (STEP_PORT(0) & ~(1 << STEP_BIT(0))) | step_port_invert_mask[0];
       #endif
-      #if SPINDLE_COMBINE_AXIS == Y_AXIS
+      #if SPINDLE_COMBINE_AXIS == C_AXIS
         STEP_PORT(1) = (STEP_PORT(1) & ~(1 << STEP_BIT(1))) | ((spindle_control_enable & SPINDLE_CONTROL_PORT) | (step_port_invert_mask[1] & (~spindle_control_enable)));
       #else
         STEP_PORT(1) = (STEP_PORT(1) & ~(1 << STEP_BIT(1))) | step_port_invert_mask[1];
@@ -790,7 +790,7 @@ void st_reset()
       #else
         STEP_PORT(0) = (STEP_PORT(0) & ~(1 << STEP_BIT(0))) | step_port_invert_mask[0];
       #endif
-      #if SPINDLE_COMBINE_AXIS == Y_AXIS
+      #if SPINDLE_COMBINE_AXIS == C_AXIS
         STEP_PORT(1) = (STEP_PORT(1) & ~(1 << STEP_BIT(1))) | ((spindle_control_enable & SPINDLE_CONTROL_PORT) | (step_port_invert_mask[1] & (~spindle_control_enable)));
       #else
         STEP_PORT(1) = (STEP_PORT(1) & ~(1 << STEP_BIT(1))) | step_port_invert_mask[1];

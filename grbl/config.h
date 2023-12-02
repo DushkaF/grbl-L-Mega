@@ -33,9 +33,9 @@
 #include "grbl.h" // For Arduino IDE compatibility.
 
 //Define for use on a lathe, enabled by default because this is a GRBL lathe version    //* TORESEARCH lim
-#define LIMIT_PIN_MASK_Y_AXIS 2					//Y-Axis pin
+#define LIMIT_PIN_MASK_C_AXIS 2					//Y-Axis pin
 #define LIMIT_PIN_MASK_ALL	7					//All pins
-#define LIMIT_PIN_MASK_ALL_EXCEPT_Y_AXIS 5		//All pins except Y-Axis pin
+#define LIMIT_PIN_MASK_ALL_EXCEPT_C_AXIS 5		//All pins except Y-Axis pin
 
 #define SPINDLE_INDEX_PULSES_BEFORE_START_G33 3
 #define INDEX_PULSE_TIMEOUT_TICS 1500000U //6 seconds between index pulses, 10 RPM, every tic is 4 us
@@ -133,10 +133,10 @@
 #define HOMING_CYCLE_1 (1<<Z_AXIS)  // OPTIONAL: Then move Z (Lathe)
 
 // NOTE: The following are two examples to setup homing for 2-axis machines.
-// #define HOMING_CYCLE_0 ((1<<X_AXIS)|(1<<Y_AXIS))  // NOT COMPATIBLE WITH COREXY: Homes both X-Y in one cycle. 
+// #define HOMING_CYCLE_0 ((1<<X_AXIS)|(1<<C_AXIS))  // NOT COMPATIBLE WITH COREXY: Homes both X-Y in one cycle. 
 
 // #define HOMING_CYCLE_0 (1<<X_AXIS)  // COREXY COMPATIBLE: First home X
-// #define HOMING_CYCLE_1 (1<<Y_AXIS)  // COREXY COMPATIBLE: Then home Y
+// #define HOMING_CYCLE_1 (1<<C_AXIS)  // COREXY COMPATIBLE: Then home Y
 
 // Number of homing cycles performed after when the machine initially jogs to limit switches.
 // This help in preventing overshoot and should improve repeatability. This value should be one or
@@ -198,7 +198,7 @@
 
 // Enable CoreXY kinematics. Use ONLY with CoreXY machines.
 // IMPORTANT: If homing is enabled, you must reconfigure the homing cycle #defines above to
-// #define HOMING_CYCLE_0 (1<<X_AXIS) and #define HOMING_CYCLE_1 (1<<Y_AXIS)
+// #define HOMING_CYCLE_0 (1<<X_AXIS) and #define HOMING_CYCLE_1 (1<<C_AXIS)
 // NOTE: This configuration option alters the motion of the X and Y axes to principle of operation
 // defined at (http://corexy.com/theory.html). Motors are assumed to positioned and wired exactly as
 // described, if not, motions may move in strange directions. Grbl requires the CoreXY A and B motors
@@ -221,9 +221,9 @@
 // #define INVERT_LIMIT_PIN_MASK ((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)) // Default disabled. Uncomment to enable.
 #ifdef DEFAULTS_RAMPS_BOARD
   // Only enable the following line if you have - (min) limit switches attached
-  //#define INVERT_MIN_LIMIT_PIN_MASK ((1<<X_AXIS) | (1<<Y_AXIS) | (1<<Z_AXIS))
+  //#define INVERT_MIN_LIMIT_PIN_MASK ((1<<X_AXIS) | (1<<C_AXIS) | (1<<Z_AXIS))
   // Only enable the following line if you have + (max) limit switches attached
-  //#define INVERT_MAX_LIMIT_PIN_MASK ((1<<X_AXIS) | (1<<Y_AXIS) | (1<<Z_AXIS))  
+  //#define INVERT_MAX_LIMIT_PIN_MASK ((1<<X_AXIS) | (1<<C_AXIS) | (1<<Z_AXIS))  
 #endif
 
 // Inverts the spindle enable pin from low-disabled/high-enabled to low-enabled/high-disabled. Useful
@@ -347,10 +347,12 @@
 //#define DISABLE_PROBE_PIN_PULL_UP
 //#define DISABLE_CONTROL_PIN_PULL_UP
 
+
+//NOTE: tool compensation for all axis added 
 // Sets which axis the tool length offset is applied. Assumes the spindle is always parallel with
 // the selected axis with the tool oriented toward the negative direction. In other words, a positive
 // tool length offset value is subtracted from the current location.
-#define TOOL_LENGTH_OFFSET_AXIS X_AXIS // Default z-axis. Valid values are X_AXIS, Y_AXIS, or Z_AXIS. //*TORESEARCH
+// #define TOOL_LENGTH_OFFSET_AXIS X_AXIS // Default z-axis. Valid values are X_AXIS, Y_AXIS, or Z_AXIS. //*TORESEARCH
 
 // Used by variable spindle output only. This forces the PWM output to a minimum duty cycle when enabled.
 // The PWM pin will still read 0V when the spindle is disabled. Most users will not need this option, but

@@ -36,7 +36,7 @@ static void report_util_feedback_line_feed() { serial_write(']'); report_util_li
 static void report_util_gcode_modes_G() { printPgmString(PSTR(" G")); }
 static void report_util_gcode_modes_M() { printPgmString(PSTR(" M")); }
 // static void report_util_comment_line_feed() { serial_write(')'); report_util_line_feed(); }
-static void report_util_axis_values(float *axis_value) {
+void report_util_axis_values(float *axis_value) {
   uint8_t idx;
   for (idx=0; idx<N_AXIS; idx++) {
     printFloat_CoordValue(axis_value[idx]);
@@ -286,10 +286,23 @@ void report_ngc_parameters()
   printPgmString(PSTR("[G92:")); // Print G92,G92.1 which are not persistent in memory
   report_util_axis_values(gc_state.coord_offset);
   report_util_feedback_line_feed();
-  printPgmString(PSTR("[TLO:")); // Print tool length offset value
-  report_util_axis_values(gc_state.tool_length_offset);
-  // printFloat_CoordValue(gc_state.tool_length_offset); //CHANGED
-  report_util_feedback_line_feed();
+  
+  float tool_data[N_AXIS];
+  uint8_t tool_select;
+  for (tool_select = 1; tool_select < MAX_TOOL_NUMBER; tool_select++) {
+    if (!(settings_read_tool_data(tool_select,tool_data))) {
+      report_status_message(STATUS_SETTING_READ_FAIL);
+      return;
+    }
+    printPgmString(PSTR("[TLO"));
+    print_uint8_base10(tool_select);
+    serial_write(':');
+    report_util_axis_values(tool_data);
+    report_util_feedback_line_feed();
+  }
+  // printPgmString(PSTR("[TLO:")); // Print tool length offset value
+  // report_util_axis_values(gc_state.tool_length_offset);
+  // report_util_feedback_line_feed();
   report_probe_parameters(); // Print probe parameters. Not persistent in memory.
 }
 
@@ -576,7 +589,7 @@ void report_realtime_status()
       if (prb_pin_state) { serial_write('P'); }
       if (lim_pin_state) {
         if (bit_istrue(lim_pin_state,bit(X_AXIS))) { serial_write('X'); }
-        if (bit_istrue(lim_pin_state,bit(Y_AXIS))) { serial_write('Y'); }
+        if (bit_istrue(lim_pin_state,bit(C_AXIS))) { serial_write('Y'); }
         if (bit_istrue(lim_pin_state,bit(Z_AXIS))) { serial_write('Z'); }
       }
       if (ctrl_pin_state) {
